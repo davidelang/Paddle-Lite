@@ -60,7 +60,7 @@ class DDimLite {
 
   std::string repr() const;
 
-  friend STL::ostream &operator<<(STL::ostream &os, const DDimLite &dims) {
+  friend std::ostream &operator<<(std::ostream &os, const DDimLite &dims) {
     os << dims.repr();
     return os;
   }
