@@ -60,11 +60,6 @@ class DDimLite {
 
   std::string repr() const;
 
-  friend STL::ostream &operator<<(STL::ostream &os, const DDimLite &dims) {
-    os << dims.repr();
-    return os;
-  }
-
   friend bool operator==(const DDimLite &a, const DDimLite &b) {
     if (a.size() != b.size()) return false;
     for (size_t i = 0; i < a.size(); i++) {
@@ -88,5 +83,19 @@ class DDimLite {
 using DDim = paddle::lite::DDimLite;
 }  // namespace lite
 }  // namespace paddle
+
+#if defined(LITE_ON_TINY_PUBLISH) && !defined(TARGET_IOS)
+namespace paddle {
+namespace lite {
+namespace replace_stl {
+template <>
+inline ostream& ostream::operator<<(const DDimLite& obj) {
+  *this << obj.repr();
+  return *this;
+}
+}  // namespace replace_stl
+}  // namespace lite
+}  // namespace paddle
+#endif
 
 #endif  // LITE_CORE_DIM_H_
