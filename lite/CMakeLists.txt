@@ -11,7 +11,11 @@ message(STATUS "LITE_WITH_PROFILE:\t${LITE_WITH_PROFILE}")
 message(STATUS "LITE_WITH_CV:\t${LITE_WITH_CV}")
 
 set(LITE_MODEL_DIR "${THIRD_PARTY_PATH}/install")
-set(LITE_ON_MOBILE ${LITE_WITH_ARM})
+if(ANDROID OR IOS)
+    set(LITE_ON_MOBILE ON)
+else()
+    set(LITE_ON_MOBILE ${LITE_WITH_ARM})
+endif()
 
 add_subdirectory(backends)
 add_subdirectory(utils)
@@ -177,7 +181,7 @@ endif()
 # ----------------------------- PUBLISH -----------------------------
 # The final target for publish lite lib
 add_custom_target(publish_inference)
-if (LITE_WITH_ARM)
+if (LITE_WITH_ARM OR LITE_WITH_X86)
     # for publish
     set(INFER_LITE_PUBLISH_ROOT "${PADDLE_BINARY_DIR}/inference_lite_lib.${ARM_TARGET_OS}.${ARM_TARGET_ARCH_ABI}")
     if (LITE_WITH_OPENCL)
@@ -279,8 +283,8 @@ if (LITE_WITH_X86)
             COMMAND cp "${PADDLE_SOURCE_DIR}/lite/api/paddle_*.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
             COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/paddle_use_kernels.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
             COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/paddle_use_ops.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
-            COMMAND cp "${PADDLE_BINARY_DIR}/libpaddle_api_full_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
-            COMMAND cp "${PADDLE_BINARY_DIR}/libpaddle_api_light_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
+            # COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/libpaddle_api_full_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
+            COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/libpaddle_api_light_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
             COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/*.dylib" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
             )
         add_custom_target(publish_inference_third_party ${TARGET}
@@ -300,8 +304,8 @@ if (LITE_WITH_X86)
             COMMAND cp "${PADDLE_SOURCE_DIR}/lite/api/paddle_*.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
             COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/paddle_use_kernels.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
             COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/paddle_use_ops.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
-            COMMAND cp "${PADDLE_BINARY_DIR}/libpaddle_api_full_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
-            COMMAND cp "${PADDLE_BINARY_DIR}/libpaddle_api_light_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
+            # COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/libpaddle_api_full_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
+            COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/libpaddle_api_light_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
             COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/*.so" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
             )
         add_dependencies(publish_inference_cxx_lib bundle_full_api)
@@ -315,7 +319,17 @@ endif()
 if (LITE_WITH_X86)
   if(WIN32)
         if(${CMAKE_GENERATOR}  MATCHES "Ninja")
-            add_custom_target(publish_inference_x86_cxx_lib ${TARGET}
+            
+if(LITE_ON_TINY_PUBLISH)
+    if(NOT TARGET bundle_full_api)
+        add_custom_target(bundle_full_api)
+    endif()
+    if(NOT TARGET paddle_full_api_shared)
+        add_custom_target(paddle_full_api_shared)
+    endif()
+endif()
+
+        add_custom_target(publish_inference_x86_cxx_lib ${TARGET}
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${INFER_LITE_PUBLISH_ROOT}/bin"
                 COMMAND ${CMAKE_COMMAND} -E copy "${PADDLE_BINARY_DIR}/lite/api/test_model_bin.exe" "${INFER_LITE_PUBLISH_ROOT}/bin"
@@ -330,7 +344,17 @@ if (LITE_WITH_X86)
                 COMMAND ${CMAKE_COMMAND} -E copy "${PADDLE_BINARY_DIR}/lite/api/libpaddle_api_light_bundled.lib" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
             )
         else()
-            add_custom_target(publish_inference_x86_cxx_lib ${TARGET}
+            
+if(LITE_ON_TINY_PUBLISH)
+    if(NOT TARGET bundle_full_api)
+        add_custom_target(bundle_full_api)
+    endif()
+    if(NOT TARGET paddle_full_api_shared)
+        add_custom_target(paddle_full_api_shared)
+    endif()
+endif()
+
+        add_custom_target(publish_inference_x86_cxx_lib ${TARGET}
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${INFER_LITE_PUBLISH_ROOT}/bin"
                 COMMAND ${CMAKE_COMMAND} -E copy "${PADDLE_BINARY_DIR}/lite/api//${CMAKE_BUILD_TYPE}/test_model_bin.exe" "${INFER_LITE_PUBLISH_ROOT}/bin"
@@ -376,36 +400,62 @@ if (LITE_WITH_X86)
             add_dependencies(publish_inference_x86_cxx_demos dirent)
         endif()
   else()
-    add_custom_target(publish_inference_x86_cxx_lib ${TARGET}
-            COMMAND mkdir -p "${INFER_LITE_PUBLISH_ROOT}/bin"
-            COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/test_model_bin" "${INFER_LITE_PUBLISH_ROOT}/bin"
-            )
-    add_dependencies(publish_inference_x86_cxx_lib test_model_bin)
-
-    configure_file(${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_light_demo/CMakeLists.txt.in ${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_light_demo/CMakeLists.txt @ONLY)
-    configure_file(${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_full_demo/CMakeLists.txt.in ${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_full_demo/CMakeLists.txt @ONLY)
-    add_custom_target(publish_inference_x86_cxx_demos ${TARGET}
-           COMMAND mkdir -p "${INFER_LITE_PUBLISH_ROOT}/demo/cxx"
-           COMMAND cp -r "${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_light_demo" "${INFER_LITE_PUBLISH_ROOT}/demo/cxx/mobilenetv1_light"
-           COMMAND cp -r "${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_full_demo" "${INFER_LITE_PUBLISH_ROOT}/demo/cxx/mobilenetv1_full"
-           COMMAND mkdir -p "${INFER_LITE_PUBLISH_ROOT}/third_party"
-           COMMAND rm -rf "${INFER_LITE_PUBLISH_ROOT}/demo/cxx/mobilenetv1_light/*.in"
-           COMMAND rm -rf "${INFER_LITE_PUBLISH_ROOT}/demo/cxx/mobilenetv1_full/*.in"
-           COMMAND rm -rf "${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_light_demo/CMakeLists.txt"
-           COMMAND rm -rf "${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_full_demo/CMakeLists.txt"
-       )
-    if(WITH_MKL)
-        add_custom_command(TARGET publish_inference_x86_cxx_demos POST_BUILD
-            COMMAND cp -r "${PADDLE_BINARY_DIR}/third_party/install/mklml" "${INFER_LITE_PUBLISH_ROOT}/third_party/")
+    
+if(LITE_ON_TINY_PUBLISH)
+    if(NOT TARGET bundle_full_api)
+        add_custom_target(bundle_full_api)
     endif()
-    add_dependencies(publish_inference_x86_cxx_lib publish_inference_x86_cxx_demos)
-    add_dependencies(publish_inference_x86_cxx_demos paddle_full_api_shared eigen3)
+    if(NOT TARGET paddle_full_api_shared)
+        add_custom_target(paddle_full_api_shared)
+    endif()
+endif()
+
+        add_custom_target(publish_inference_x86_cxx_lib ${TARGET}
+            COMMAND mkdir -p "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
+            COMMAND mkdir -p "${INFER_LITE_PUBLISH_ROOT}/bin"
+            COMMAND mkdir -p "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
+            COMMAND cp "${PADDLE_SOURCE_DIR}/lite/api/paddle_*.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
+            COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/paddle_use_kernels.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
+            COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/paddle_use_ops.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
+            # COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/libpaddle_api_full_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
+            COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/libpaddle_api_light_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
+            COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/libpaddle_light_api_shared.so" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib" || true
+            )
+    if(NOT LITE_ON_TINY_PUBLISH)
+        add_custom_command(TARGET publish_inference_x86_cxx_lib POST_BUILD
+            COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/test_model_bin" "${INFER_LITE_PUBLISH_ROOT}/bin"
+        )
+        add_dependencies(publish_inference_x86_cxx_lib test_model_bin)
+    endif()
+    add_dependencies(publish_inference_x86_cxx_lib bundle_full_api)
+    add_dependencies(publish_inference_x86_cxx_lib bundle_light_api)
+
+    if (NOT LITE_ON_TINY_PUBLISH)
+        configure_file(${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_light_demo/CMakeLists.txt.in ${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_light_demo/CMakeLists.txt @ONLY)
+        configure_file(${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_full_demo/CMakeLists.txt.in ${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_full_demo/CMakeLists.txt @ONLY)
+        add_custom_target(publish_inference_x86_cxx_demos ${TARGET}
+               COMMAND mkdir -p "${INFER_LITE_PUBLISH_ROOT}/demo/cxx"
+               COMMAND cp -r "${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_light_demo" "${INFER_LITE_PUBLISH_ROOT}/demo/cxx/mobilenetv1_light"
+               COMMAND cp -r "${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_full_demo" "${INFER_LITE_PUBLISH_ROOT}/demo/cxx/mobilenetv1_full"
+               COMMAND mkdir -p "${INFER_LITE_PUBLISH_ROOT}/third_party"
+               COMMAND rm -rf "${INFER_LITE_PUBLISH_ROOT}/demo/cxx/mobilenetv1_light/*.in"
+               COMMAND rm -rf "${INFER_LITE_PUBLISH_ROOT}/demo/cxx/mobilenetv1_full/*.in"
+               COMMAND rm -rf "${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_light_demo/CMakeLists.txt"
+               COMMAND rm -rf "${PADDLE_SOURCE_DIR}/lite/demo/cxx/x86_mobilenetv1_full_demo/CMakeLists.txt"
+           )
+        if(WITH_MKL)
+            add_custom_command(TARGET publish_inference_x86_cxx_demos POST_BUILD
+                COMMAND cp -r "${PADDLE_BINARY_DIR}/third_party/install/mklml" "${INFER_LITE_PUBLISH_ROOT}/third_party/")
+        endif()
+        add_dependencies(publish_inference_x86_cxx_lib publish_inference_x86_cxx_demos)
+        add_dependencies(publish_inference_x86_cxx_demos paddle_full_api_shared eigen3)
+        add_dependencies(publish_inference publish_inference_x86_cxx_demos)
+    endif()
     add_dependencies(publish_inference publish_inference_x86_cxx_lib)
-    add_dependencies(publish_inference publish_inference_x86_cxx_demos)
   endif()
 endif()
 
-if (LITE_WITH_ARM)
+if (LITE_WITH_ARM OR LITE_WITH_X86)
     if (NOT LITE_ON_TINY_PUBLISH)
         # add cxx lib
         add_custom_target(publish_inference_cxx_lib ${TARGET}
@@ -415,8 +465,8 @@ if (LITE_WITH_ARM)
                 COMMAND cp "${PADDLE_SOURCE_DIR}/lite/api/paddle_*.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
                 COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/paddle_use_kernels.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
                 COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/paddle_use_ops.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
-                COMMAND cp "${PADDLE_BINARY_DIR}/libpaddle_api_full_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
-                COMMAND cp "${PADDLE_BINARY_DIR}/libpaddle_api_light_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
+                # COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/libpaddle_api_full_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
+                COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/libpaddle_api_light_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
                 COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/test_model_bin" "${INFER_LITE_PUBLISH_ROOT}/bin"
                 COMMAND cp "${PADDLE_SOURCE_DIR}/lite/utils/cv/paddle_*.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
                 )
@@ -645,8 +695,8 @@ if(LITE_WITH_SW)
         COMMAND cp "${PADDLE_SOURCE_DIR}/lite/api/paddle_*.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
         COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/paddle_use_kernels.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
         COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/paddle_use_ops.h" "${INFER_LITE_PUBLISH_ROOT}/cxx/include"
-        COMMAND cp "${PADDLE_BINARY_DIR}/libpaddle_api_full_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
-        COMMAND cp "${PADDLE_BINARY_DIR}/libpaddle_api_light_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
+        # COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/libpaddle_api_full_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
+        COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/libpaddle_api_light_bundled.a" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
         COMMAND cp "${PADDLE_BINARY_DIR}/lite/api/*.so" "${INFER_LITE_PUBLISH_ROOT}/cxx/lib"
     )
     add_dependencies(publish_inference_cxx_lib bundle_full_api)

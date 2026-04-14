@@ -38,6 +38,7 @@ if(LITE_WITH_ARM)
     include(external/arm_dnn_library)
   endif()
 else()
+  include(postproject)
   include(coveralls)
   include(external/gflags)      # download, build, install gflags
   include(external/glog)        # download, build, install glog
