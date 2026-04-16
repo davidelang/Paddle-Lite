@@ -26,21 +26,23 @@ limitations under the License. */
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
-
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T,
           int MajorType = Eigen::RowMajor,
           typename IndexType = Eigen::DenseIndex>
 using EigenVector = lite::fluid::EigenVector<T, MajorType, IndexType>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T,
           int MajorType = Eigen::RowMajor,
           typename IndexType = Eigen::DenseIndex>
 using EigenMatrix = lite::fluid::EigenMatrix<T, MajorType, IndexType>;
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T, bool is_test>
 class MaxSeqPoolFunctor {
  public:
@@ -91,6 +93,7 @@ class MaxSeqPoolFunctor {
 };
 // Instantisation of Max Sequence Pooling for test phase eg. no need to fill
 // index buffer
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class MaxSeqPoolFunctor<T, true> {
  public:
@@ -141,6 +144,7 @@ class MaxSeqPoolFunctor<T, true> {
     }
   }
 };
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class MaxSeqPoolGradFunctor {
  public:
@@ -176,6 +180,7 @@ class MaxSeqPoolGradFunctor {
   }
 };
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class LastSeqPoolFunctor {
  public:
@@ -209,6 +214,7 @@ class LastSeqPoolFunctor {
   }
 };
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class FirstSeqPoolFunctor {
  public:
@@ -242,6 +248,7 @@ class FirstSeqPoolFunctor {
   }
 };
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class SumSeqPoolGradFunctor {
  public:
@@ -268,6 +275,7 @@ class SumSeqPoolGradFunctor {
   }
 };
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class SequencePoolFunctor<TARGET(kX86), T> {
  public:
@@ -351,6 +359,7 @@ class SequencePoolFunctor<TARGET(kX86), T> {
   }
 };
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class SequencePoolGradFunctor<TARGET(kX86), T> {
  public:

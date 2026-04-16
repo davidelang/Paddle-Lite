@@ -21,12 +21,12 @@ limitations under the License. */
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
-
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void density_prior_box(const int64_t img_width,
                        const int64_t img_height,
                        const int64_t feature_width,

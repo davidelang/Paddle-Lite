@@ -18,7 +18,7 @@ limitations under the License. */
 #include "lite/backends/x86/math/avx/conv_utils.h"
 #include "lite/backends/x86/math/conv_depthwise_impl.h"
 #include "lite/core/memory.h"
-#if 1
+#ifdef __AVX__
 #include <immintrin.h>
 #else
 #include <smmintrin.h>
@@ -28,7 +28,6 @@ limitations under the License. */
 #pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
-
 #endif
 
 namespace paddle {
@@ -37,6 +36,7 @@ namespace x86 {
 namespace math {
 #define Max(a, b) (a > b ? a : b)
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void conv_depthwise_3x3s2_p01_direct(
     const float *din,
     float *dout,
@@ -615,6 +615,7 @@ void conv_depthwise_3x3s2_p01_direct(
   TargetFree(TARGET(kX86), write_ptr);
 #endif
 }
+__attribute__((target("avx,avx2,fma,f16c")))
 void conv_depthwise_3x3s1_p01_direct(
     const float *din,
     float *dout,
@@ -1330,6 +1331,7 @@ void conv_depthwise_3x3s1_p01_direct(
 #endif
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void conv_depthwise_3x3_pack(const operators::ConvParam &param,
                              lite::Tensor *input_padding_,
                              lite::Tensor *input_pack_,

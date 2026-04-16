@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License. */
 
-#if 1
+#ifdef __AVX__
 
 #include "lite/backends/x86/math/activation_functions.h"
 #include "lite/backends/x86/math/avx/avx_mathfuns.h"
@@ -21,7 +21,6 @@ limitations under the License. */
 #pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
-
 
 namespace paddle {
 namespace lite {

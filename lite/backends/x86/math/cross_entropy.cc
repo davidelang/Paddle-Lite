@@ -19,17 +19,18 @@ limitations under the License. */
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
-
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T,
           int MajorType = Eigen::RowMajor,
           typename IndexType = Eigen::DenseIndex>
 using EigenMatrix = lite::fluid::EigenMatrix<T, MajorType, IndexType>;
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class CrossEntropyFunctor<lite::TargetType::kX86, T> {
  public:

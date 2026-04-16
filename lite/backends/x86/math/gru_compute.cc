@@ -19,12 +19,12 @@ limitations under the License. */
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
-
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 struct GRUUnitFunctor<lite::TargetType::kX86, T> {
   static void compute(const lite::X86Context &context,
@@ -84,6 +84,7 @@ struct GRUUnitFunctor<lite::TargetType::kX86, T> {
   }
 };
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 struct GRUUnitGradFunctor<lite::TargetType::kX86, T> {
   static void compute(const lite::X86Context &context,

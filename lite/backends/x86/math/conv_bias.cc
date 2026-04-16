@@ -20,12 +20,12 @@ limitations under the License. */
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
-
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void bias_add_broadcast(const float* dinx,
                         const float* diny,
                         float* dout,
@@ -47,6 +47,7 @@ void bias_add_broadcast(const float* dinx,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void bias_add_relu_broadcast(const float* dinx,
                              const float* diny,
                              float* dout,
@@ -68,6 +69,7 @@ void bias_add_relu_broadcast(const float* dinx,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void bias_add_relu6_broadcast(const float* dinx,
                               const float* diny,
                               float* dout,

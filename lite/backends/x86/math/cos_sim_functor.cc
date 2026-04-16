@@ -19,12 +19,12 @@ limitations under the License. */
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
-
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 struct CosSimDyFunctor<lite::TargetType::kX86, T> {
   void operator()(const lite::X86Context& ctx,

@@ -48,7 +48,6 @@
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
-
 #if 1
 namespace paddle {
 namespace lite {

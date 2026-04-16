@@ -21,7 +21,6 @@ limitations under the License. */
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
-
 namespace paddle {
 namespace lite {
 namespace x86 {
@@ -31,6 +30,7 @@ namespace math {
  * All tensors' dimension should be the same and the values of
  * each dimension must be the same, except the axis dimension.
  */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class ConcatFunctor<lite::TargetType::kX86, T> {
  public:
@@ -79,6 +79,7 @@ class ConcatFunctor<lite::TargetType::kX86, T> {
  * All tensors' dimension should be the same and the values of
  * each dimension must be the same, except the axis dimension.
  */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class SplitFunctor<lite::TargetType::kX86, T> {
  public:

@@ -20,11 +20,11 @@ limitations under the License. */
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
-
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class Unpool2dMaxFunctor<lite::TargetType::kX86, T> {
  public:
@@ -57,6 +57,7 @@ class Unpool2dMaxFunctor<lite::TargetType::kX86, T> {
     }
   }
 };
+__attribute__((target("avx,avx2,fma,f16c")))
 template <class T>
 class Unpool2dMaxGradFunctor<lite::TargetType::kX86, T> {
  public:

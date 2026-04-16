@@ -26,13 +26,13 @@ limitations under the License. */
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
-
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 #define Min(a, b) (a < b ? a : b)
 #define ROUNDUP(a, b) ((((a) + (b)-1) / (b)) * (b))
+__attribute__((target("avx,avx2,fma,f16c")))
 void conv_depthwise_5x5s1(const float* din,
                           float* dout,
                           int num,
@@ -413,6 +413,7 @@ void conv_depthwise_5x5s1(const float* din,
   TargetFree(TARGET(kX86), pack_input);
   TargetFree(TARGET(kX86), pack_out);
 }
+__attribute__((target("avx,avx2,fma,f16c")))
 void conv_depthwise_5x5s2(const float* din,
                           float* dout,
                           int num,

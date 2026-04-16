@@ -14,7 +14,7 @@
 
 #include "lite/backends/x86/math/activation.h"
 
-#if 1
+#ifdef __AVX__
 #include <immintrin.h>
 #include "lite/backends/x86/math/avx/avx_mathfuns.h"
 #else
@@ -30,12 +30,12 @@
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
-
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <>
 void mish(const float* din, float* dout, int size, float threshold) {
 #if 1
@@ -140,7 +140,9 @@ void mish(const float* din, float* dout, int size, float threshold) {
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <>
+__attribute__((target("avx,avx2,fma,f16c")))
 void hard_swish(const float* din,
                 float* dout,
                 int size,

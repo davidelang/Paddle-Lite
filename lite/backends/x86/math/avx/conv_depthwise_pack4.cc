@@ -21,12 +21,12 @@ limitations under the License. */
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
-
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void conv_depthwise_m128(lite::Tensor* input,
                          lite::Tensor* output,
                          lite::Tensor* filter,

@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License. */
 
-#if 1
+#ifdef __AVX2__
 
 #include "lite/backends/x86/math/gemm_s8u8_compute.h"
 #include <cmath>
@@ -22,13 +22,14 @@ limitations under the License. */
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
-
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <>
+__attribute__((target("avx,avx2,fma,f16c")))
 void generate_gemm_s8u8_x86_kern<int8_t>::repack_bias(bool is_trans,
                                                       int M,
                                                       int K,
@@ -58,7 +59,9 @@ void generate_gemm_s8u8_x86_kern<int8_t>::repack_bias(bool is_trans,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <>
+__attribute__((target("avx,avx2,fma,f16c")))
 void generate_gemm_s8u8_x86_kern<float>::repack_bias(bool is_trans,
                                                      int M,
                                                      int K,
@@ -87,7 +90,9 @@ void generate_gemm_s8u8_x86_kern<float>::repack_bias(bool is_trans,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <>
+__attribute__((target("avx,avx2,fma,f16c")))
 void generate_gemm_s8u8_x86_kern<int8_t>::calc_scale(
     int M, float *Sa, float Sb, float Sc, float *out) {
   for (int i = 0; i < M; i++) {
@@ -95,7 +100,9 @@ void generate_gemm_s8u8_x86_kern<int8_t>::calc_scale(
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <>
+__attribute__((target("avx,avx2,fma,f16c")))
 void generate_gemm_s8u8_x86_kern<float>::calc_scale(
     int M, float *Sa, float Sb, float Sc, float *out) {
   for (int i = 0; i < M; i++) {
@@ -103,7 +110,9 @@ void generate_gemm_s8u8_x86_kern<float>::calc_scale(
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <>
+__attribute__((target("avx,avx2,fma,f16c")))
 void generate_gemm_s8u8_x86_kern<int8_t>::calc_block(
     int M, int N, int K, int *blk_m, int *blk_n) {
   int block_size, scale_tmp;
@@ -125,7 +134,9 @@ void generate_gemm_s8u8_x86_kern<int8_t>::calc_block(
   *blk_n = block_n;
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <>
+__attribute__((target("avx,avx2,fma,f16c")))
 void generate_gemm_s8u8_x86_kern<float>::calc_block(
     int M, int N, int K, int *blk_m, int *blk_n) {
   int block_size, scale_tmp;

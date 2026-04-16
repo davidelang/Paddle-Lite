@@ -17,7 +17,7 @@ limitations under the License. */
 #include <algorithm>
 #include "lite/core/op_registry.h"
 
-#if 1
+#ifdef __AVX__
 #include <immintrin.h>
 #endif
 #ifdef __SSE__
@@ -27,7 +27,6 @@ limitations under the License. */
 #pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
-
 #endif
 
 namespace paddle {
@@ -83,6 +82,7 @@ static void activate_relu_inplace(float *data, int len, float alpha, int mode) {
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 static void activate_relu_inplace_bias(float *data,
                                        const float *bias,
                                        int channel,
@@ -194,6 +194,7 @@ static void activate_lrelu_inplace(float *data, int len, float alpha) {
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 static void activate_lrelu_inplace_bias(float *data,
                                         const float *bias,
                                         int channel,
@@ -247,6 +248,7 @@ static void activate_lrelu_inplace_bias(float *data,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 static void activate_hardswish_inplace_bias(float *data,
                                             const float *bias,
                                             int channel,
@@ -351,6 +353,7 @@ static void activate_hardswish_inplace_bias(float *data,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 static void activate_hardswish_inplace(
     float *data, int len, float scale, float threshold, float offset) {
 #if 1
@@ -438,6 +441,7 @@ static void activate_hardswish_inplace(
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 static void activate_none_inplace_bias(float *data,
                                        const float *bias,
                                        int channel,
@@ -480,6 +484,7 @@ static void activate_none_inplace_bias(float *data,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void fill_bias_act(float *tensor,
                    const float *bias,
                    int channel,

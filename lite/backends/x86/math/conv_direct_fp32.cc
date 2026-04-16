@@ -17,7 +17,7 @@ limitations under the License. */
 #include <vector>
 #include "lite/backends/x86/math/avx/conv_utils.h"
 #include "lite/core/context.h"
-#if 1
+#ifdef __AVX__
 #include <immintrin.h>
 #else
 #include <emmintrin.h>
@@ -28,7 +28,6 @@ limitations under the License. */
 #pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
-
 
 namespace paddle {
 namespace lite {
@@ -48,6 +47,7 @@ struct jit_param {
 
 conv_direct::conv_direct() : JitCode(8192, Xbyak::AutoGrow) {}
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void conv_direct::generate_code(int ic,
                                 int ih,
                                 int iw,
@@ -307,6 +307,7 @@ void conv_direct::generate_code(int ic,
   postCode();
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void conv_direct::run(const float* i_data,
                       const float* trans_weight,
                       float* trans_out,
@@ -473,6 +474,7 @@ void conv_direct::run(const float* i_data,
 
 // we always assume oc % BLOCK == 0!
 // convert [N C/8 H W 8] to [N C H W]!
+__attribute__((target("avx,avx2,fma,f16c")))
 void conv_direct_transpose_out(int bs,
                                int oc,
                                int oh,
