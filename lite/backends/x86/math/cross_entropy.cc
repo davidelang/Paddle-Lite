@@ -14,18 +14,22 @@ limitations under the License. */
 
 #include "lite/backends/x86/math/cross_entropy.h"
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC target("avx,avx2,fma,f16c")
+#endif
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T,
           int MajorType = Eigen::RowMajor,
           typename IndexType = Eigen::DenseIndex>
 using EigenMatrix = lite::fluid::EigenMatrix<T, MajorType, IndexType>;
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class CrossEntropyFunctor<lite::TargetType::kX86, T> {
  public:
@@ -78,3 +82,7 @@ template class CrossEntropyFunctor<lite::TargetType::kX86, double>;
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC pop_options
+#endif

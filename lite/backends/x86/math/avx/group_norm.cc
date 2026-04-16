@@ -17,12 +17,17 @@
 #include <stdio.h>
 #include <cmath>
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC target("avx,avx2,fma,f16c")
+#endif
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
-__attribute__((target("avx,avx2,fma,f16c")))
 void group_norm(const float* in,
                 float* out,
                 const int n,
@@ -196,3 +201,7 @@ void group_norm(const float* in,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC pop_options
+#endif

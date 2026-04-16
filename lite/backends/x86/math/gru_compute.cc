@@ -14,12 +14,17 @@ limitations under the License. */
 #include "lite/backends/x86/math/gru_cpu_kernel.h"
 #include "lite/backends/x86/math/gru_kernel.h"
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC target("avx,avx2,fma,f16c")
+#endif
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 struct GRUUnitFunctor<lite::TargetType::kX86, T> {
   static void compute(const lite::X86Context &context,
@@ -79,7 +84,6 @@ struct GRUUnitFunctor<lite::TargetType::kX86, T> {
   }
 };
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 struct GRUUnitGradFunctor<lite::TargetType::kX86, T> {
   static void compute(const lite::X86Context &context,
@@ -181,3 +185,7 @@ template struct GRUUnitGradFunctor<lite::TargetType::kX86, double>;
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC pop_options
+#endif

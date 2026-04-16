@@ -15,13 +15,17 @@
 #include "lite/backends/x86/math/clip.h"
 #include <immintrin.h>
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC target("avx,avx2,fma,f16c")
+#endif
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
-__attribute__((target("avx,avx2,fma,f16c")))
 template <>
-__attribute__((target("avx,avx2,fma,f16c")))
 void clip<float>(
     const float* din, float* dout, const int num, float max_, float min_) {
   int cnt = num >> 4;
@@ -82,3 +86,7 @@ void clip<float>(
 } /* namespace x86 */
 } /* namespace lite */
 } /* namespace paddle */
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC pop_options
+#endif

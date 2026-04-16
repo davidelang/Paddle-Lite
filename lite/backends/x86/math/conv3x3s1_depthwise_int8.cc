@@ -17,6 +17,12 @@ limitations under the License. */
 #include "lite/backends/x86/math/conv_depthwise_int8.h"
 #include "lite/backends/x86/math/saturate.h"
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC target("avx,avx2,fma,f16c")
+#endif
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
@@ -309,7 +315,6 @@ inline void transpose3x4_4x4_epi(__m128i& row0,  // NOLINT
   row3 = _mm_shuffle_epi32(row3, 0xf4);  // [11, 11, 01, 00]
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 void prepack_input_im2col_s1_int8(const int8_t* din,
                                   int8_t* dout,
                                   int pad_w,
@@ -676,28 +681,24 @@ void prepack_input_im2col_s1_int8(const int8_t* din,
     }
   }
 }
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename Dtype>
 inline void store_data_dtype_8(Dtype* dout,
                                __m256i vin,
                                __m256 vscale,
                                __m256 vbias);
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename Dtype>
 inline void store_data_dtype_2(Dtype* dout,
                                __m256i vin,
                                __m256 vscale,
                                __m256 vbias);
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename Dtype>
 inline void store_data_dtype_1(Dtype* dout,
                                __m128i vin,
                                __m128 vscale,
                                __m128 vbias);
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <>
 inline void store_data_dtype_8(float* dout,
                                __m256i vin,
@@ -715,7 +716,6 @@ inline void store_data_dtype_8(float* dout,
   // c0c4d0d4
   _mm_storeu_ps(dout + 4, _mm_unpackhi_ps(vres_0, vres_1));
 }
-__attribute__((target("avx,avx2,fma,f16c")))
 template <>
 inline void store_data_dtype_8(int8_t* dout,
                                __m256i vin,
@@ -748,7 +748,6 @@ inline void store_data_dtype_8(int8_t* dout,
   _mm_storel_epi64(reinterpret_cast<__m128i*>(dout),
                    _mm_unpacklo_epi32(v0_i8, v1_i8));
 }
-__attribute__((target("avx,avx2,fma,f16c")))
 template <>
 inline void store_data_dtype_2(float* dout,
                                __m256i vin,
@@ -762,7 +761,6 @@ inline void store_data_dtype_2(float* dout,
   dout[0] = (reinterpret_cast<float*>(&vres))[0];
   dout[1] = (reinterpret_cast<float*>(&vres))[4];
 }
-__attribute__((target("avx,avx2,fma,f16c")))
 template <>
 inline void store_data_dtype_2(int8_t* dout,
                                __m256i vin,
@@ -780,7 +778,6 @@ inline void store_data_dtype_2(int8_t* dout,
   dout[0] = saturate_cast<int8_t>(v0);
   dout[1] = saturate_cast<int8_t>(v1);
 }
-__attribute__((target("avx,avx2,fma,f16c")))
 template <>
 inline void store_data_dtype_1(float* dout,
                                __m128i vin,
@@ -793,7 +790,6 @@ inline void store_data_dtype_1(float* dout,
   // a0b0c0d0a4b4c4d4 -> a0a4b0b4c0c4d0d4
   dout[0] = (reinterpret_cast<float*>(&vres))[0];
 }
-__attribute__((target("avx,avx2,fma,f16c")))
 template <>
 inline void store_data_dtype_1(int8_t* dout,
                                __m128i vin,
@@ -809,9 +805,7 @@ inline void store_data_dtype_1(int8_t* dout,
   dout[0] = saturate_cast<int8_t>(v0);
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename Dtype>
-__attribute__((target("avx,avx2,fma,f16c")))
 void conv_3x3s1_dw_int8(Dtype* dout,
                         const int8_t* din,
                         const int8_t* weights,
@@ -974,7 +968,6 @@ void conv_3x3s1_dw_int8(Dtype* dout,
   // LOG(INFO) << "compute duration: " << (end-start) * 1000.0 /CLOCKS_PER_SEC;
   TargetFree(TARGET(kX86), pre_din);
 }
-__attribute__((target("avx,avx2,fma,f16c")))
 template void conv_3x3s1_dw_int8(float* dout,
                                  const int8_t* din,
                                  const int8_t* weights,
@@ -991,7 +984,6 @@ template void conv_3x3s1_dw_int8(float* dout,
                                  float alpha,
                                  const float* scale,
                                  X86Context* ctx);
-__attribute__((target("avx,avx2,fma,f16c")))
 template void conv_3x3s1_dw_int8(int8_t* dout,
                                  const int8_t* din,
                                  const int8_t* weights,
@@ -1024,3 +1016,7 @@ template void conv_3x3s1_dw_int8(int8_t* dout,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC pop_options
+#endif

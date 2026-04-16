@@ -23,6 +23,12 @@ limitations under the License. */
 #else
 #include <smmintrin.h>
 #include <xmmintrin.h>
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC target("avx,avx2,fma,f16c")
+#endif
+
 #endif
 
 namespace paddle {
@@ -31,7 +37,6 @@ namespace x86 {
 namespace math {
 #define Max(a, b) (a > b ? a : b)
 
-__attribute__((target("avx,avx2,fma,f16c")))
 void conv_depthwise_3x3s2_p01_direct(
     const float *din,
     float *dout,
@@ -610,7 +615,6 @@ void conv_depthwise_3x3s2_p01_direct(
   TargetFree(TARGET(kX86), write_ptr);
 #endif
 }
-__attribute__((target("avx,avx2,fma,f16c")))
 void conv_depthwise_3x3s1_p01_direct(
     const float *din,
     float *dout,
@@ -1326,7 +1330,6 @@ void conv_depthwise_3x3s1_p01_direct(
 #endif
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 void conv_depthwise_3x3_pack(const operators::ConvParam &param,
                              lite::Tensor *input_padding_,
                              lite::Tensor *input_pack_,
@@ -1445,3 +1448,7 @@ void conv_depthwise_3x3_pack(const operators::ConvParam &param,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC pop_options
+#endif

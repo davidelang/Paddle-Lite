@@ -20,6 +20,12 @@ limitations under the License. */
 #include <smmintrin.h>
 #include <tmmintrin.h>
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC target("avx,avx2,fma,f16c")
+#endif
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
@@ -560,7 +566,6 @@ Attention:
       break;                                                                 \
   }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 void packB_i82u8_notrans(
     int N, int K, int stride, const int8_t *B, uint8_t *pack_B) {
   int loop_n = 0;
@@ -891,7 +896,6 @@ void packB_i82u8_notrans(
                      veci_line[0]);                                        \
   }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 void packB_i82u8_trans(
     int N, int K, int step, const int8_t *B, uint8_t *pack_B) {
   int loop_n = 0, loop_k = 0;
@@ -1125,7 +1129,6 @@ void packB_i82u8_trans(
 
 // PackA 's K dim need 4-aligned,
 // so it needs M * K_4aligned Bytes.
-__attribute__((target("avx,avx2,fma,f16c")))
 void gemm_s8u8s8_prepackA(
     int M, int K, const int8_t *A, int8_t *pack_A, bool is_trans) {
   if (is_trans) {
@@ -1135,7 +1138,6 @@ void gemm_s8u8s8_prepackA(
   }
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 void gemm_s8u8s8_runpackB(
     int N, int K, int stride, const int8_t *B, uint8_t *pack_B, bool is_trans) {
   if (is_trans) {
@@ -1185,3 +1187,7 @@ void gemm_s8u8s8_runpackB(
 }  // namespace paddle
 
 #endif  // __AVX2__
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC pop_options
+#endif

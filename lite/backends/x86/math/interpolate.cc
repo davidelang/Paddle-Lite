@@ -17,12 +17,17 @@ limitations under the License. */
 #include <vector>
 #include "lite/backends/x86/math/math_function.h"
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC target("avx,avx2,fma,f16c")
+#endif
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
-__attribute__((target("avx,avx2,fma,f16c")))
 void bilinear_interp(const float* input_data,
                      float* output_data,
                      const float ratio_h,
@@ -469,7 +474,6 @@ void bilinear_interp(const float* input_data,
   lite::host::free(buf);
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 void nearest_interp(const float* input_data,
                     float* output_data,
                     const float ratio_h,
@@ -537,7 +541,6 @@ inline std::vector<int> get_new_shape(
   return vec_new_shape;
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 inline std::vector<T> get_new_data_from_tensor(const Tensor* new_data_tensor) {
   std::vector<T> vec_new_data;
@@ -548,7 +551,6 @@ inline std::vector<T> get_new_data_from_tensor(const Tensor* new_data_tensor) {
   return vec_new_data;
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 void interpolate(lite::Tensor* input,
                  lite::Tensor* out_size,
                  std::vector<const lite::Tensor*> list_new_size_tensor,
@@ -641,7 +643,6 @@ void interpolate(lite::Tensor* input,
   }
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 void interpolate_v2(lite::Tensor* input,
                     lite::Tensor* out_size,
                     std::vector<const lite::Tensor*> list_new_size_tensor,
@@ -749,3 +750,7 @@ void interpolate_v2(lite::Tensor* input,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC pop_options
+#endif

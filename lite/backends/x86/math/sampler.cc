@@ -19,6 +19,12 @@ limitations under the License. */
 #include <vector>
 #include "lite/utils/log/cp_logging.h"
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC target("avx,avx2,fma,f16c")
+#endif
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
@@ -100,3 +106,7 @@ float CustomSampler::Probability(int64_t value) const { return probs_[value]; }
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC pop_options
+#endif

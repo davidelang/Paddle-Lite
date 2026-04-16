@@ -16,6 +16,12 @@ limitations under the License. */
 #include <vector>
 #include "lite/backends/x86/math/avx/conv_utils.h"
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC target("avx,avx2,fma,f16c")
+#endif
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
@@ -25,7 +31,6 @@ namespace math {
 // filter [1,  oc/8, kh, kw, 8]
 // bias   [    oc             ]
 // output [bs, oc/8, oh, ow, 8]
-__attribute__((target("avx,avx2,fma,f16c")))
 void conv_depthwise_3x3s1_m256(lite::Tensor* input,
                                lite::Tensor* output,
                                lite::Tensor* filter,
@@ -449,7 +454,6 @@ void conv_depthwise_3x3s1_m256(lite::Tensor* input,
 // filter [1,  oc/8, kh, kw, 8]
 // bias   [    oc             ]
 // output [bs, oc/8, oh, ow, 8]
-__attribute__((target("avx,avx2,fma,f16c")))
 void conv_depthwise_3x3s2_m256(lite::Tensor* input,
                                lite::Tensor* output,
                                lite::Tensor* filter,
@@ -712,7 +716,6 @@ void conv_depthwise_3x3s2_m256(lite::Tensor* input,
 // filter [1,  oc/8, kh, kw, 8]
 // bias   [    oc             ]
 // output [bs, oc/8, oh, ow, 8]
-__attribute__((target("avx,avx2,fma,f16c")))
 void conv_depthwise_m256(lite::Tensor* input,
                          lite::Tensor* output,
                          lite::Tensor* filter,
@@ -805,3 +808,7 @@ void conv_depthwise_m256(lite::Tensor* input,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC pop_options
+#endif

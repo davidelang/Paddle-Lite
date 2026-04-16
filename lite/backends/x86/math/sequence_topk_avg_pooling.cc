@@ -16,12 +16,17 @@ limitations under the License. */
 #include <algorithm>
 #include <vector>
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC target("avx,avx2,fma,f16c")
+#endif
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 void get_topk_pos(const T* data, int length, int k, int* pos, bool debug) {
   size_t real_k = k < length ? k : length;
@@ -60,7 +65,6 @@ void get_topk_pos(const T* data, int length, int k, int* pos, bool debug) {
  * All tensors' dimension should be the same and the values of
  * each dimension must be the same, except the axis dimension.
  */
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class SequenceTopkAvgPoolingFunctor<lite::TargetType::kX86, T> {
  public:
@@ -151,3 +155,7 @@ FOR_ALL_TYPES(DEFINE_FUNCTOR);
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC pop_options
+#endif

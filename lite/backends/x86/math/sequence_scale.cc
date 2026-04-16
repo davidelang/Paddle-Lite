@@ -15,12 +15,17 @@ limitations under the License. */
 #include "lite/backends/x86/math/sequence_scale.h"
 #include "lite/backends/x86/fluid/lod.h"
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC target("avx,avx2,fma,f16c")
+#endif
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class ScaleLoDTensorFunctor<lite::TargetType::kX86, T> {
  public:
@@ -50,3 +55,7 @@ template class ScaleLoDTensorFunctor<lite::TargetType::kX86, float>;
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC pop_options
+#endif

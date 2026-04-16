@@ -16,12 +16,17 @@ limitations under the License. */
 #include "lite/backends/x86/math/lstm_cpu_kernel.h"
 #include "lite/backends/x86/math/lstm_kernel.h"
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC target("avx,avx2,fma,f16c")
+#endif
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <class T>
 struct LstmUnitFunctor<lite::TargetType::kX86, T> {
   static void compute(const lite::X86Context& context,
@@ -51,7 +56,6 @@ struct LstmUnitFunctor<lite::TargetType::kX86, T> {
   }
 };
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <class T>
 struct LstmUnitGradFunctor<lite::TargetType::kX86, T> {
   static void compute(const lite::X86Context& context,
@@ -101,3 +105,7 @@ template class LstmUnitGradFunctor<lite::TargetType::kX86, double>;
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC pop_options
+#endif

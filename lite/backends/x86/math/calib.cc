@@ -18,11 +18,16 @@
 #include "lite/backends/x86/math/avx/avx_mathfuns.h"
 #include "lite/backends/x86/math/saturate.h"
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC target("avx,avx2,fma,f16c")
+#endif
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
-__attribute__((target("avx,avx2,fma,f16c")))
 void fp32_to_int8(const float* din,
                   int8_t* dout,
                   const float* scale,
@@ -151,7 +156,6 @@ void fp32_to_int8(const float* din,
   }
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 void int8_to_fp32(const int8_t* in,
                   float* out,
                   const float* scale,
@@ -244,3 +248,7 @@ void int8_to_fp32(const int8_t* in,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC pop_options
+#endif
