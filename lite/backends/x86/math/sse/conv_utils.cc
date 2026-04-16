@@ -1,3 +1,10 @@
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+#include <immintrin.h> // UNGUARDED
+#include <immintrin.h>
 /* Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +27,7 @@ namespace lite {
 namespace x86 {
 namespace math {
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void packC4_common(const float* din,
                    float* dout,
                    const std::vector<int>& pad,
@@ -118,6 +126,7 @@ void packC4_common(const float* din,
   }
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void unpackC4_common(const float* din,
                      float* dout,
                      int size_out_channel,

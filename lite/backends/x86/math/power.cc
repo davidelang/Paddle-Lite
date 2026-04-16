@@ -1,3 +1,9 @@
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+#include <immintrin.h> // UNGUARDED
 // Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +51,7 @@ void power<float>(const float* din,
   if (fabsf(shift_ - 0.f) < 1e-6f) {
     _do_shift = false;
   }
-#ifdef __AVX__
+#if 1
   __m256 vscale_256 = _mm256_set1_ps(scale_);
   __m256 vshift_256 = _mm256_set1_ps(shift_);
   __m256 vfactor_256 = _mm256_set1_ps(factor_);
@@ -56,7 +62,7 @@ void power<float>(const float* din,
   const float* ptr_in = din;
   if (_do_power) {
     for (int i = 0; i < cnt; i++) {
-#ifdef __AVX__
+#if 1
       __m256 vin0 = _mm256_loadu_ps(ptr_in);
       __m256 vin1 = _mm256_loadu_ps(ptr_in + 8);
       ptr_in += 16;
@@ -112,7 +118,7 @@ void power<float>(const float* din,
     }
   } else {
     for (int i = 0; i < cnt; i++) {
-#ifdef __AVX__
+#if 1
       __m256 vin0 = _mm256_loadu_ps(ptr_in);
       __m256 vin1 = _mm256_loadu_ps(ptr_in + 8);
       ptr_in += 16;

@@ -1,3 +1,9 @@
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+#include <immintrin.h> // UNGUARDED
 // Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,14 +34,14 @@ void clip<float>(
   int rem_rem = remain & 3;
   float* ptr_out = dout;
   const float* ptr_in = din;
-#ifdef __AVX__
+#if 1
   __m256 max_256 = _mm256_set1_ps(max_);
   __m256 min_256 = _mm256_set1_ps(min_);
 #endif
   __m128 vmax = _mm_set1_ps(max_);
   __m128 vmin = _mm_set1_ps(min_);
   for (int i = 0; i < cnt; i++) {
-#ifdef __AVX__
+#if 1
     __m256 vin0 = _mm256_loadu_ps(ptr_in);
     __m256 vin1 = _mm256_loadu_ps(ptr_in + 8);
     vin0 = _mm256_min_ps(_mm256_max_ps(vin0, min_256), max_256);

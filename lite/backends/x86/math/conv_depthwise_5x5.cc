@@ -1,3 +1,10 @@
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+#include <immintrin.h> // UNGUARDED
+#include <immintrin.h>
 /* Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +34,7 @@ namespace x86 {
 namespace math {
 #define Min(a, b) (a < b ? a : b)
 #define ROUNDUP(a, b) ((((a) + (b)-1) / (b)) * (b))
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_depthwise_5x5s1(const float* din,
                           float* dout,
                           int num,
@@ -57,7 +65,7 @@ void conv_depthwise_5x5s1(const float* din,
   float* pack_out = static_cast<float*>(TargetMalloc(
       TARGET(kX86), h_out * w_out * block_channel * sizeof(float)));
 
-#ifdef __AVX__
+#if 1
   packC8_common(weights, pack_weight, {0, 0, 0, 0}, 5, 5, ch_in);
 #else
   packC4_common(weights, pack_weight, {0, 0, 0, 0}, 5, 5, ch_in);
@@ -73,7 +81,7 @@ void conv_depthwise_5x5s1(const float* din,
       auto* din_ptr = din_batch + c * size_in_channel;
       auto* weights_data = pack_weight + c * 5 * 5;
 
-#ifdef __AVX__
+#if 1
       packC8_common(din_ptr,
                     pack_input,
                     {pad, pad, pad, pad},
@@ -395,7 +403,7 @@ void conv_depthwise_5x5s1(const float* din,
         }
       }
 
-#ifdef __AVX__
+#if 1
       unpackC8_common(pack_out, dout_ptr, size_out_channel, real_block_channel);
 #else
       unpackC4_common(pack_out, dout_ptr, size_out_channel, real_block_channel);
@@ -407,6 +415,7 @@ void conv_depthwise_5x5s1(const float* din,
   TargetFree(TARGET(kX86), pack_input);
   TargetFree(TARGET(kX86), pack_out);
 }
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_depthwise_5x5s2(const float* din,
                           float* dout,
                           int num,
@@ -437,7 +446,7 @@ void conv_depthwise_5x5s2(const float* din,
   float* pack_out = static_cast<float*>(TargetMalloc(
       TARGET(kX86), h_out * w_out * block_channel * sizeof(float)));
 
-#ifdef __AVX__
+#if 1
   packC8_common(weights, pack_weight, {0, 0, 0, 0}, 5, 5, ch_in);
 #else
   packC4_common(weights, pack_weight, {0, 0, 0, 0}, 5, 5, ch_in);
@@ -453,7 +462,7 @@ void conv_depthwise_5x5s2(const float* din,
       auto* din_ptr = din_batch + c * size_in_channel;
       auto* weights_data = pack_weight + c * 5 * 5;
 
-#ifdef __AVX__
+#if 1
       packC8_common(din_ptr,
                     pack_input,
                     {pad, pad, pad, pad},
@@ -790,7 +799,7 @@ void conv_depthwise_5x5s2(const float* din,
         }
       }
 
-#ifdef __AVX__
+#if 1
       unpackC8_common(pack_out, dout_ptr, size_out_channel, real_block_channel);
 #else
       unpackC4_common(pack_out, dout_ptr, size_out_channel, real_block_channel);

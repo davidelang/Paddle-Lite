@@ -1,3 +1,9 @@
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+#include <immintrin.h> // UNGUARDED
 /* Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +23,7 @@ limitations under the License. */
 #include <vector>
 #include "lite/backends/x86/math/avx/conv_utils.h"
 #include "lite/core/context.h"
-#ifdef __AVX__
+#if 1
 #include <immintrin.h>
 #else
 #include <emmintrin.h>
@@ -54,7 +60,7 @@ void conv_direct::generate_code(int ic,
                                 int ww,
                                 int wh,
                                 int stridew) {
-#ifdef __AVX__
+#if 1
   constexpr int BLOCK = 8;
 #else
   constexpr int BLOCK = 4;
@@ -317,7 +323,7 @@ void conv_direct::run(const float* i_data,
                       int wh,
                       int ww,
                       int strideh) {
-#ifdef __AVX__
+#if 1
   constexpr int BLOCK = 8;
 #else
   constexpr int BLOCK = 4;
@@ -467,6 +473,7 @@ void conv_direct::run(const float* i_data,
 
 // we always assume oc % BLOCK == 0!
 // convert [N C/8 H W 8] to [N C H W]!
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_direct_transpose_out(int bs,
                                int oc,
                                int oh,
@@ -476,7 +483,7 @@ void conv_direct_transpose_out(int bs,
                                const float* bias,
                                lite_api::ActivationType active_type,
                                operators::ActivationParam act_param) {
-#ifdef __AVX__
+#if 1
   constexpr int BLOCK = 8;
 #else
   constexpr int BLOCK = 4;
@@ -498,7 +505,7 @@ void conv_direct_transpose_out(int bs,
         for (; ow_i + BLOCK - 1 < ow; ow_i += BLOCK,
                                       from_address += BLOCK * BLOCK,
                                       dst_address += BLOCK) {
-#ifdef __AVX__
+#if 1
           __m256 row0 = _mm256_loadu_ps(from_address + 0 * BLOCK);
           __m256 row1 = _mm256_loadu_ps(from_address + 1 * BLOCK);
           __m256 row2 = _mm256_loadu_ps(from_address + 2 * BLOCK);
@@ -519,7 +526,7 @@ void conv_direct_transpose_out(int bs,
 #endif
 
           if (bias != nullptr) {
-#ifdef __AVX__
+#if 1
             row0 = _mm256_add_ps(row0, _mm256_set1_ps(bias[oc_gi + 0]));
             row1 = _mm256_add_ps(row1, _mm256_set1_ps(bias[oc_gi + 1]));
             row2 = _mm256_add_ps(row2, _mm256_set1_ps(bias[oc_gi + 2]));
@@ -537,7 +544,7 @@ void conv_direct_transpose_out(int bs,
           }
 
           if (active_type == lite_api::ActivationType::kRelu) {
-#ifdef __AVX__
+#if 1
             __m256 vzero = _mm256_set1_ps(0.f);
             row0 = _mm256_max_ps(row0, vzero);
             row1 = _mm256_max_ps(row1, vzero);
@@ -554,7 +561,7 @@ void conv_direct_transpose_out(int bs,
             row3 = _mm_max_ps(row3, _mm_set1_ps(0.f));
 #endif
           } else if (active_type == lite_api::ActivationType::kRelu6) {
-#ifdef __AVX__
+#if 1
             __m256 vzero = _mm256_set1_ps(0.f);
             __m256 vsix = _mm256_set1_ps(act_param.Relu_clipped_coef);
             row0 = _mm256_max_ps(row0, vzero);
@@ -588,7 +595,7 @@ void conv_direct_transpose_out(int bs,
 #endif
 
           } else if (active_type == lite_api::ActivationType::kLeakyRelu) {
-#ifdef __AVX__
+#if 1
             __m256 vzero = _mm256_set1_ps(0.f);
             __m256 vscale = _mm256_set1_ps(act_param.Leaky_relu_alpha);
             row0 = _mm256_blendv_ps(_mm256_mul_ps(row0, vscale),
@@ -632,7 +639,7 @@ void conv_direct_transpose_out(int bs,
                                  _mm_cmp_ps(row3, vzero, _CMP_GT_OS));
 #endif
           } else if (active_type == lite_api::ActivationType::kHardSwish) {
-#ifdef __AVX__
+#if 1
             __m256 vzero = _mm256_set1_ps(0.f);
             __m256 voffset = _mm256_set1_ps(act_param.hard_swish_offset);
             __m256 vscale = _mm256_set1_ps(1.0 / act_param.hard_swish_scale);
@@ -704,7 +711,7 @@ void conv_direct_transpose_out(int bs,
             LOG(FATAL) << "[X86] unsupported Activation type";
           }
 
-#ifdef __AVX__
+#if 1
           _mm256_storeu_ps(dst_address + 0 * ohw, row0);
           _mm256_storeu_ps(dst_address + 1 * ohw, row1);
           _mm256_storeu_ps(dst_address + 2 * ohw, row2);
@@ -722,26 +729,26 @@ void conv_direct_transpose_out(int bs,
         }
 
         for (; ow_i < ow; ow_i++, from_address += BLOCK, dst_address += 1) {
-#ifdef __AVX__
+#if 1
           __m256 row = _mm256_loadu_ps(from_address);
 #else
           __m128 row = _mm_loadu_ps(from_address);
 #endif
           if (bias != nullptr) {
-#ifdef __AVX__
+#if 1
             row = _mm256_add_ps(row, _mm256_loadu_ps(&bias[oc_gi]));
 #else
             row = _mm_add_ps(row, _mm_loadu_ps(&bias[oc_gi]));
 #endif
           }
           if (active_type == lite_api::ActivationType::kRelu) {
-#ifdef __AVX__
+#if 1
             row = _mm256_max_ps(row, _mm256_set1_ps(0.f));
 #else
             row = _mm_max_ps(row, _mm_set1_ps(0.f));
 #endif
           } else if (active_type == lite_api::ActivationType::kRelu6) {
-#ifdef __AVX__
+#if 1
             row = _mm256_max_ps(row, _mm256_set1_ps(0.f));
             row =
                 _mm256_min_ps(row, _mm256_set1_ps(act_param.Relu_clipped_coef));
@@ -751,7 +758,7 @@ void conv_direct_transpose_out(int bs,
 
 #endif
           } else if (active_type == lite_api::ActivationType::kLeakyRelu) {
-#ifdef __AVX__
+#if 1
             __m256 val_scale =
                 _mm256_mul_ps(row, _mm256_set1_ps(act_param.Leaky_relu_alpha));
             row = _mm256_blendv_ps(
@@ -765,7 +772,7 @@ void conv_direct_transpose_out(int bs,
                 val_scale, row, _mm_cmp_ps(row, _mm_setzero_ps(), _CMP_GT_OS));
 #endif
           } else if (active_type == lite_api::ActivationType::kHardSwish) {
-#ifdef __AVX__
+#if 1
             __m256 val_offset =
                 _mm256_add_ps(row, _mm256_set1_ps(act_param.hard_swish_offset));
             __m256 val_scale = _mm256_mul_ps(
@@ -788,7 +795,7 @@ void conv_direct_transpose_out(int bs,
           } else {
             LOG(FATAL) << "[X86] unsupported Activation type";
           }
-#ifdef __AVX__
+#if 1
           *(dst_address + 0 * oh * ow) = (reinterpret_cast<float*>(&row))[0];
           *(dst_address + 1 * oh * ow) = (reinterpret_cast<float*>(&row))[1];
           *(dst_address + 2 * oh * ow) = (reinterpret_cast<float*>(&row))[2];

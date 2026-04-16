@@ -1,3 +1,10 @@
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+#include <immintrin.h> // UNGUARDED
+#include <immintrin.h>
 /* Copyright (c) 2018 paddlepaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +23,7 @@ limitations under the License. */
 #include <string.h>
 #include "lite/backends/x86/math/avx/avx_mathfuns.h"
 
-#ifdef __AVX__
+#if 1
 #include <immintrin.h>
 #endif
 #ifdef __SSE__
@@ -32,6 +39,7 @@ static bool is_a_ge_zero_and_a_lt_b(int a, int b) {
   return static_cast<unsigned>(a) < static_cast<unsigned>(b);
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void col2im(const float* data_col,
             const int channels,
             const int height,
@@ -80,6 +88,7 @@ void col2im(const float* data_col,
   }
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_transpose_depthwise_s1(const float* dst,
                                  const float* weights,
                                  const int channels,
@@ -107,7 +116,7 @@ void conv_transpose_depthwise_s1(const float* dst,
   const int oc_plane_size = output_h * output_w;
   const int rr_plane_size = kernel_h * kernel_w;
 
-#ifdef __AVX__
+#if 1
   __m256 vec_zero = _mm256_set1_ps(0.f);
   __m256 vec_width = _mm256_set1_ps(width * 1.0f);
 #endif
@@ -146,7 +155,7 @@ void conv_transpose_depthwise_s1(const float* dst,
           int iw = -pad_w0 + kx * dilation_w;
           int i = 0;
 
-#ifdef __AVX__
+#if 1
           for (; i + 7 < output_w; i += 8, iw += 8) {
             int dst_offset = dst_z + dst_y + i;
             const float* dst_addr = dst + dst_offset;
@@ -249,6 +258,7 @@ void conv_transpose_depthwise_s1(const float* dst,
   TargetFree(TARGET(kX86), zero_ptr);
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_transpose_depthwise_s2(const float* dst,
                                  const float* weights,
                                  const int channels,
@@ -276,7 +286,7 @@ void conv_transpose_depthwise_s2(const float* dst,
   const int oc_plane_size = output_h * output_w;
   const int rr_plane_size = kernel_h * kernel_w;
 
-#ifdef __AVX2__
+#if 1 // Forced on via target attribute
   __m256 vec_zero = _mm256_set1_ps(0.f);
   __m256 vec_width = _mm256_set1_ps(width * 1.0f);
   const int mask_store[8] = {-1, 0, -1, 0, -1, 0, -1, 0};
@@ -317,7 +327,7 @@ void conv_transpose_depthwise_s2(const float* dst,
           int iw = -pad_w0 + kx * dilation_w;
           int i = 0;
 
-#ifdef __AVX2__  // _mm256_permute4x64_epi64 need avx2
+#if 1 // Forced on via target attribute  // _mm256_permute4x64_epi64 need avx2
           for (; i + 7 < output_w; i += 8, iw += 16) {
             int dst_offset = dst_z + dst_y + i;
             const float* dst_addr = dst + dst_offset;

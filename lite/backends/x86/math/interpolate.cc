@@ -1,3 +1,10 @@
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+#include <immintrin.h> // UNGUARDED
+#include <immintrin.h>
 /* Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +29,7 @@ namespace lite {
 namespace x86 {
 namespace math {
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void bilinear_interp(const float* input_data,
                      float* output_data,
                      const float ratio_h,
@@ -135,7 +143,7 @@ void bilinear_interp(const float* input_data,
 
       int dx = 0;
 // w_bound loop
-#ifdef __AVX__
+#if 1
       for (; dx + 3 < w_bound; dx += 4) {
         int x0 = xofs[dx * 2];
         int x1 = xofs[(dx + 1) * 2];
@@ -210,7 +218,7 @@ void bilinear_interp(const float* input_data,
       float param1 = *(src + sy1 * w_in + w_in - 1);
       const float buffer0[2] = {param0, param0};
       const float buffer1[2] = {param1, param1};
-#ifdef __AVX__
+#if 1
       __m256 _s0p0p3 = _mm256_set1_ps(param0);
       __m256 _s1p0p3 = _mm256_set1_ps(param1);
       for (; dx + 3 < w_out; dx += 4) {
@@ -254,7 +262,7 @@ void bilinear_interp(const float* input_data,
 
       int nn = 0;
 
-#ifdef __AVX__
+#if 1
       // 8 float
       __m256 _b0 = _mm256_set1_ps(b0);
       __m256 _b1 = _mm256_set1_ps(b1);
@@ -305,7 +313,7 @@ void bilinear_interp(const float* input_data,
       float* rows1p = rows1;
 
       int dx = 0;
-#ifdef __AVX__
+#if 1
       const float* s1 = s0;
 
       // w_bound loop
@@ -379,7 +387,7 @@ void bilinear_interp(const float* input_data,
       float param = *(src + sy * w_in + w_in - 1);
       const float buffer1[2] = {param, param};
 
-#ifdef __AVX__
+#if 1
       __m256 _s0p0p3 = _mm256_set1_ps(param);
       __m256 _s1p0p3 = _mm256_set1_ps(param);
 
@@ -421,7 +429,7 @@ void bilinear_interp(const float* input_data,
 
       int nn = 0;
 
-#ifdef __AVX__
+#if 1
       // 8 float
       __m256 _b0 = _mm256_set1_ps(b0);
       __m256 _b1 = _mm256_set1_ps(b1);
@@ -468,6 +476,7 @@ void bilinear_interp(const float* input_data,
   lite::host::free(buf);
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void nearest_interp(const float* input_data,
                     float* output_data,
                     const float ratio_h,
@@ -545,6 +554,7 @@ inline std::vector<T> get_new_data_from_tensor(const Tensor* new_data_tensor) {
   return vec_new_data;
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void interpolate(lite::Tensor* input,
                  lite::Tensor* out_size,
                  std::vector<const lite::Tensor*> list_new_size_tensor,
@@ -637,6 +647,7 @@ void interpolate(lite::Tensor* input,
   }
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void interpolate_v2(lite::Tensor* input,
                     lite::Tensor* out_size,
                     std::vector<const lite::Tensor*> list_new_size_tensor,

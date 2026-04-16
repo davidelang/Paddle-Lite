@@ -1,3 +1,10 @@
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+#include <immintrin.h> // UNGUARDED
+#include <immintrin.h>
 /* Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -281,6 +288,7 @@ namespace math {
   doutr += 192;
 
 // a0b0c0d0 a1b1c1d1 a2b2c2d2 -> a0a1a20 b0b1b20 c0c1c20 d0d1d20
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 inline void transpose3x4_4x4_epi(__m128i& row0,  // NOLINT
                                  __m128i& row1,  // NOLINT
                                  __m128i& row2,  // NOLINT
@@ -309,6 +317,7 @@ inline void transpose3x4_4x4_epi(__m128i& row0,  // NOLINT
   row3 = _mm_shuffle_epi32(row3, 0xf4);  // [11, 11, 01, 00]
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void prepack_input_im2col_s1_int8(const int8_t* din,
                                   int8_t* dout,
                                   int pad_w,
@@ -676,24 +685,28 @@ void prepack_input_im2col_s1_int8(const int8_t* din,
   }
 }
 template <typename Dtype>
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 inline void store_data_dtype_8(Dtype* dout,
                                __m256i vin,
                                __m256 vscale,
                                __m256 vbias);
 
 template <typename Dtype>
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 inline void store_data_dtype_2(Dtype* dout,
                                __m256i vin,
                                __m256 vscale,
                                __m256 vbias);
 
 template <typename Dtype>
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 inline void store_data_dtype_1(Dtype* dout,
                                __m128i vin,
                                __m128 vscale,
                                __m128 vbias);
 
 template <>
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 inline void store_data_dtype_8(float* dout,
                                __m256i vin,
                                __m256 vscale,
@@ -711,6 +724,7 @@ inline void store_data_dtype_8(float* dout,
   _mm_storeu_ps(dout + 4, _mm_unpackhi_ps(vres_0, vres_1));
 }
 template <>
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 inline void store_data_dtype_8(int8_t* dout,
                                __m256i vin,
                                __m256 vscale,
@@ -743,6 +757,7 @@ inline void store_data_dtype_8(int8_t* dout,
                    _mm_unpacklo_epi32(v0_i8, v1_i8));
 }
 template <>
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 inline void store_data_dtype_2(float* dout,
                                __m256i vin,
                                __m256 vscale,
@@ -756,6 +771,7 @@ inline void store_data_dtype_2(float* dout,
   dout[1] = (reinterpret_cast<float*>(&vres))[4];
 }
 template <>
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 inline void store_data_dtype_2(int8_t* dout,
                                __m256i vin,
                                __m256 vscale,
@@ -773,6 +789,7 @@ inline void store_data_dtype_2(int8_t* dout,
   dout[1] = saturate_cast<int8_t>(v1);
 }
 template <>
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 inline void store_data_dtype_1(float* dout,
                                __m128i vin,
                                __m128 vscale,
@@ -785,6 +802,7 @@ inline void store_data_dtype_1(float* dout,
   dout[0] = (reinterpret_cast<float*>(&vres))[0];
 }
 template <>
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 inline void store_data_dtype_1(int8_t* dout,
                                __m128i vin,
                                __m128 vscale,
@@ -800,6 +818,7 @@ inline void store_data_dtype_1(int8_t* dout,
 }
 
 template <typename Dtype>
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_3x3s1_dw_int8(Dtype* dout,
                         const int8_t* din,
                         const int8_t* weights,

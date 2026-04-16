@@ -1,3 +1,9 @@
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+#include <immintrin.h> // UNGUARDED
 /* Copyright (c) 2021 paddlepaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +18,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License. */
 
-#ifdef __AVX2__
+#if 1 // Forced on via target attribute
 
 #include "lite/backends/x86/math/gemm_s8u8_pack.h"
 #include <emmintrin.h>
@@ -86,6 +92,7 @@ typedef long long int __int64;  // NOLINT
   _mm_storel_pi(reinterpret_cast<__m64 *>(out_ptr), _mm_castsi128_ps(vec_out));
 
 // if K is not 4-aligned, need to pad zero
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void packA_i8_notrans(int M, int K, const int8_t *AA, int8_t *pack_A) {
   int8_t *out_ptr = pack_A;
   int loop_m = 0;
@@ -203,6 +210,7 @@ void packA_i8_notrans(int M, int K, const int8_t *AA, int8_t *pack_A) {
   vec_line[2] = _mm_setzero_si128(); \
   vec_line[3] = _mm_setzero_si128();
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void packA_i8_trans(int M, int K, const int8_t *AA, int8_t *pack_A) {
   int8_t *out_ptr = pack_A;
   int loop_m = 0;
@@ -560,6 +568,7 @@ Attention:
       break;                                                                 \
   }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void packB_i82u8_notrans(
     int N, int K, int stride, const int8_t *B, uint8_t *pack_B) {
   int loop_n = 0;
@@ -890,6 +899,7 @@ void packB_i82u8_notrans(
                      veci_line[0]);                                        \
   }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void packB_i82u8_trans(
     int N, int K, int step, const int8_t *B, uint8_t *pack_B) {
   int loop_n = 0, loop_k = 0;
@@ -1123,6 +1133,7 @@ void packB_i82u8_trans(
 
 // PackA 's K dim need 4-aligned,
 // so it needs M * K_4aligned Bytes.
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void gemm_s8u8s8_prepackA(
     int M, int K, const int8_t *A, int8_t *pack_A, bool is_trans) {
   if (is_trans) {
@@ -1132,6 +1143,7 @@ void gemm_s8u8s8_prepackA(
   }
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void gemm_s8u8s8_runpackB(
     int N, int K, int stride, const int8_t *B, uint8_t *pack_B, bool is_trans) {
   if (is_trans) {

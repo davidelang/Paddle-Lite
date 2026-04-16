@@ -1,3 +1,9 @@
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+#include <immintrin.h> // UNGUARDED
 // Copyright (c) 2019 PaddlePaddle Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +20,7 @@
 
 #include "lite/backends/x86/math/activation.h"
 
-#ifdef __AVX__
+#if 1
 #include <immintrin.h>
 #include "lite/backends/x86/math/avx/avx_mathfuns.h"
 #else
@@ -31,8 +37,9 @@ namespace x86 {
 namespace math {
 
 template <>
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void mish(const float* din, float* dout, int size, float threshold) {
-#ifdef __AVX__
+#if 1
   int cnt = size >> 3;
   int remain = size & 7;
 #else
@@ -40,7 +47,7 @@ void mish(const float* din, float* dout, int size, float threshold) {
   int remain = size & 3;
 #endif
 
-#ifdef __AVX__
+#if 1
   __m256 vthreshold = _mm256_set1_ps(threshold);
   __m256 vone = _mm256_set1_ps(1.f);
   __m256 vtwo = _mm256_set1_ps(2.f);
@@ -135,13 +142,14 @@ void mish(const float* din, float* dout, int size, float threshold) {
 }
 
 template <>
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void hard_swish(const float* din,
                 float* dout,
                 int size,
                 float scale,
                 float offset,
                 float threshold) {
-#ifdef __AVX__
+#if 1
   int cnt = size >> 5;
   int remain = size & 31;
   __m256 vec_zero = _mm256_set1_ps(0.f);
@@ -159,7 +167,7 @@ void hard_swish(const float* din,
   int cnt_4 = remain >> 2;
   int rem_4 = remain & 3;
   for (int i = 0; i < cnt; i++) {
-#ifdef __AVX__
+#if 1
     __m256 vin0 = _mm256_loadu_ps(din);
     __m256 vin1 = _mm256_loadu_ps(din + 8);
     __m256 vin2 = _mm256_loadu_ps(din + 16);

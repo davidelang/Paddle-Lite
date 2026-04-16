@@ -1,3 +1,10 @@
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+#include <immintrin.h> // UNGUARDED
+// TEST_PATCH
 /* Copyright (c) 2018 paddlepaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +24,7 @@ limitations under the License. */
 #include <algorithm>
 #include "lite/core/op_registry.h"
 
-#ifdef __AVX__
+#if 1
 #include <immintrin.h>
 #endif
 #ifdef __SSE__
@@ -29,11 +36,12 @@ namespace lite {
 namespace x86 {
 namespace math {
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 static void activate_relu_inplace(float *data, int len, float alpha, int mode) {
   int i = 0;
 
   if (0 == mode) {  // relu
-#ifdef __AVX__
+#if 1
     __m256 vec_zero = _mm256_set1_ps(0.f);
     for (; i + 7 < len; i += 8) {
       __m256 vec_data = _mm256_loadu_ps(data + i);
@@ -51,7 +59,7 @@ static void activate_relu_inplace(float *data, int len, float alpha, int mode) {
       data[i] = data[i] > 0.f ? data[i] : 0.f;
     }
   } else {  // relu6
-#ifdef __AVX__
+#if 1
     __m256 vec_zero = _mm256_set1_ps(0.f);
     __m256 vec_alph = _mm256_set1_ps(alpha);
     for (; i + 7 < len; i += 8) {
@@ -77,6 +85,7 @@ static void activate_relu_inplace(float *data, int len, float alpha, int mode) {
   }
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 static void activate_relu_inplace_bias(float *data,
                                        const float *bias,
                                        int channel,
@@ -87,7 +96,7 @@ static void activate_relu_inplace_bias(float *data,
   int j = 0;
   float *tmp_data = data;
 
-#ifdef __AVX__
+#if 1
   __m256 vec_zero = {0.f};
   __m256 vec_bias = {0.f};
   __m256 vec_data = {0.f};
@@ -104,7 +113,7 @@ static void activate_relu_inplace_bias(float *data,
     for (j = 0; j < channel; j++) {
       i = 0;
       tmp_data = data + j * channel_size;
-#ifdef __AVX__
+#if 1
       vec_bias = _mm256_set1_ps(bias[j]);
       for (; i + 7 < channel_size; i += 8) {
         vec_data = _mm256_loadu_ps(tmp_data + i);
@@ -129,7 +138,7 @@ static void activate_relu_inplace_bias(float *data,
     for (j = 0; j < channel; j++) {
       i = 0;
       tmp_data = data + j * channel_size;
-#ifdef __AVX__
+#if 1
       vec_bias = _mm256_set1_ps(bias[j]);
       for (; i + 7 < channel_size; i += 8) {
         vec_data = _mm256_loadu_ps(tmp_data + i);
@@ -158,11 +167,12 @@ static void activate_relu_inplace_bias(float *data,
   }
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 static void activate_lrelu_inplace(float *data, int len, float alpha) {
   const int cmp_le_os = 2;
   int i = 0;
 
-#ifdef __AVX__
+#if 1
   __m256 vec_zero = _mm256_set1_ps(0.f);
   __m256 vec_alph = _mm256_set1_ps(alpha);
   for (; i + 7 < len; i += 8) {
@@ -188,6 +198,7 @@ static void activate_lrelu_inplace(float *data, int len, float alpha) {
   }
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 static void activate_lrelu_inplace_bias(float *data,
                                         const float *bias,
                                         int channel,
@@ -198,7 +209,7 @@ static void activate_lrelu_inplace_bias(float *data,
   int j = 0;
   float *tmp_data = data;
 
-#ifdef __AVX__
+#if 1
   __m256 vec_zero = _mm256_set1_ps(0.f);
   __m256 vec_alph = _mm256_set1_ps(alpha);
   __m256 vec_bias = {0.f};
@@ -213,7 +224,7 @@ static void activate_lrelu_inplace_bias(float *data,
     i = 0;
     tmp_data = data + j * channel_size;
 
-#ifdef __AVX__
+#if 1
     vec_bias = _mm256_set1_ps(bias[j]);
     for (; i + 7 < channel_size; i += 8) {
       __m256 vec_data = _mm256_add_ps(vec_bias, _mm256_loadu_ps(tmp_data + i));
@@ -241,6 +252,7 @@ static void activate_lrelu_inplace_bias(float *data,
   }
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 static void activate_hardswish_inplace_bias(float *data,
                                             const float *bias,
                                             int channel,
@@ -248,7 +260,7 @@ static void activate_hardswish_inplace_bias(float *data,
                                             float scale,
                                             float threshold,
                                             float offset) {
-#ifdef __AVX__
+#if 1
   int cnt = channel_size >> 5;
   int remain = channel_size & 31;
   __m256 vec_zero = _mm256_set1_ps(0.f);
@@ -266,14 +278,14 @@ static void activate_hardswish_inplace_bias(float *data,
   int cnt_4 = remain >> 2;
   int rem_4 = remain & 3;
   for (int i = 0; i < channel; i++) {
-#ifdef __AVX__
+#if 1
     __m256 vec_bias = _mm256_set1_ps(bias[i]);
 #endif
     __m128 vec_bias_128 = _mm_set1_ps(bias[i]);
     float *tmp_data = data + i * channel_size;
 
     for (int j = 0; j < cnt; j++) {
-#ifdef __AVX__
+#if 1
       __m256 vin0 = _mm256_add_ps(_mm256_loadu_ps(tmp_data), vec_bias);
       __m256 vin1 = _mm256_add_ps(_mm256_loadu_ps(tmp_data + 8), vec_bias);
       __m256 vin2 = _mm256_add_ps(_mm256_loadu_ps(tmp_data + 16), vec_bias);
@@ -345,9 +357,10 @@ static void activate_hardswish_inplace_bias(float *data,
   }
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 static void activate_hardswish_inplace(
     float *data, int len, float scale, float threshold, float offset) {
-#ifdef __AVX__
+#if 1
   int cnt = len >> 5;
   int remain = len & 31;
   __m256 vec_zero = _mm256_set1_ps(0.f);
@@ -366,7 +379,7 @@ static void activate_hardswish_inplace(
   int rem_4 = remain & 3;
   float *tmp_data = data;
   for (int i = 0; i < cnt; i++) {
-#ifdef __AVX__
+#if 1
     __m256 vin0 = _mm256_loadu_ps(tmp_data);
     __m256 vin1 = _mm256_loadu_ps(tmp_data + 8);
     __m256 vin2 = _mm256_loadu_ps(tmp_data + 16);
@@ -432,6 +445,7 @@ static void activate_hardswish_inplace(
   }
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 static void activate_none_inplace_bias(float *data,
                                        const float *bias,
                                        int channel,
@@ -440,7 +454,7 @@ static void activate_none_inplace_bias(float *data,
   int j = 0;
   float *tmp_data = data;
 
-#ifdef __AVX__
+#if 1
   __m256 vec_bias = {0.f};
   __m256 vec_data = {0.f};
 #endif
@@ -452,7 +466,7 @@ static void activate_none_inplace_bias(float *data,
   for (j = 0; j < channel; j++) {
     i = 0;
     tmp_data = data + j * channel_size;
-#ifdef __AVX__
+#if 1
     vec_bias = _mm256_set1_ps(bias[j]);
     for (; i + 7 < channel_size; i += 8) {
       vec_data = _mm256_loadu_ps(tmp_data + i);
@@ -474,6 +488,7 @@ static void activate_none_inplace_bias(float *data,
   }
 }
 
+__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void fill_bias_act(float *tensor,
                    const float *bias,
                    int channel,
