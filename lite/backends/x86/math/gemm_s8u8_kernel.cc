@@ -22,17 +22,13 @@ limitations under the License. */
 #include <tmmintrin.h>
 #include <algorithm>
 
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-
-
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
 //********************** activte and bias function **************************
+__attribute__((target("avx,avx2,fma,f16c")))
 void gemm_fuse_relu_bias(__m256* vec_data,
                          __m256 vec_bias,
                          __m256 vec_alph,
@@ -59,6 +55,7 @@ void gemm_fuse_relu_bias(__m256* vec_data,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void gemm_fuse_relu_bias_128(__m128* vec_data,
                              __m128 vec_bias,
                              __m128 vec_alph,
@@ -83,6 +80,7 @@ void gemm_fuse_relu_bias_128(__m128* vec_data,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void gemm_fuse_relu_bias_f32(float* data,
                              float bias,
                              float alph,
@@ -355,6 +353,7 @@ void gemm_fuse_relu_bias_f32(float* data,
     *(c_ptr + i * ldc + 1) = CLIP_S8(in0_int);               \
   }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void gemm_kernel_loop_int8(int M,
                            int N,
                            int K,
@@ -670,6 +669,7 @@ void gemm_kernel_loop_int8(int M,
     *(c_ptr + i * ldc + 1) = in0_f32;                        \
   }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void gemm_kernel_loop_int8(int M,
                            int N,
                            int K,

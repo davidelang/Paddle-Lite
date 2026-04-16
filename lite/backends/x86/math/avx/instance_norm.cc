@@ -16,16 +16,12 @@
 #include <immintrin.h>
 #include <cmath>
 
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-
-
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void instance_norm(const float* in,
                    float* out,
                    const int n,

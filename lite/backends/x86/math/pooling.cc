@@ -16,11 +16,6 @@ limitations under the License. */
 #include <algorithm>
 #include <vector>
 
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-
-
 namespace paddle {
 namespace lite {
 namespace x86 {
@@ -31,6 +26,7 @@ namespace math {
  * Ksize, strides, paddings are two elements. These two elements represent
  * height and width, respectively.
  */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename PoolProcess, typename T>
 class Pool2dFunctor<lite::TargetType::kX86, PoolProcess, T> {
  public:
@@ -118,6 +114,7 @@ class Pool2dFunctor<lite::TargetType::kX86, PoolProcess, T> {
 * Ksize, strides, paddings are two elements. These two elements represent height
 * and width, respectively.
 */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename PoolProcess, class T>
 class Pool2dGradFunctor<lite::TargetType::kX86, PoolProcess, T> {
  public:
@@ -205,6 +202,7 @@ class Pool2dGradFunctor<lite::TargetType::kX86, PoolProcess, T> {
  * Ksize, strides, paddings are two elements. These two elements represent
  * height and width, respectively.
  */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <class T>
 class MaxPool2dGradFunctor<lite::TargetType::kX86, T> {
  public:
@@ -273,27 +271,35 @@ class MaxPool2dGradFunctor<lite::TargetType::kX86, T> {
 template class MaxPool2dGradFunctor<lite::TargetType::kX86, float>;
 template class MaxPool2dGradFunctor<lite::TargetType::kX86, double>;
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool2dFunctor<lite::TargetType::kX86,
                              lite::x86::math::MaxPool<float>,
                              float>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool2dFunctor<lite::TargetType::kX86,
                              lite::x86::math::AvgPool<float>,
                              float>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool2dGradFunctor<lite::TargetType::kX86,
                                  lite::x86::math::MaxPoolGrad<float>,
                                  float>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool2dGradFunctor<lite::TargetType::kX86,
                                  lite::x86::math::AvgPoolGrad<float>,
                                  float>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool2dFunctor<lite::TargetType::kX86,
                              lite::x86::math::MaxPool<double>,
                              double>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool2dFunctor<lite::TargetType::kX86,
                              lite::x86::math::AvgPool<double>,
                              double>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool2dGradFunctor<lite::TargetType::kX86,
                                  lite::x86::math::MaxPoolGrad<double>,
                                  double>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool2dGradFunctor<lite::TargetType::kX86,
                                  lite::x86::math::AvgPoolGrad<double>,
                                  double>;
@@ -303,6 +309,7 @@ template class Pool2dGradFunctor<lite::TargetType::kX86,
  * Ksize, strides, paddings are three elements. These three elements represent
  * depth, height and width, respectively.
  */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename PoolProcess, class T>
 class Pool3dFunctor<lite::TargetType::kX86, PoolProcess, T> {
  public:
@@ -403,6 +410,7 @@ class Pool3dFunctor<lite::TargetType::kX86, PoolProcess, T> {
  * Ksize, strides, paddings are three elements. These three elements represent
  * depth, height and width, respectively.
  */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename PoolProcess, class T>
 class Pool3dGradFunctor<lite::TargetType::kX86, PoolProcess, T> {
  public:
@@ -512,6 +520,7 @@ class Pool3dGradFunctor<lite::TargetType::kX86, PoolProcess, T> {
  * Ksize, strides, paddings are three elements. These three elements represent
  * depth, height and width, respectively.
  */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <class T>
 class MaxPool3dGradFunctor<lite::TargetType::kX86, T> {
  public:
@@ -594,27 +603,35 @@ class MaxPool3dGradFunctor<lite::TargetType::kX86, T> {
 template class MaxPool3dGradFunctor<lite::TargetType::kX86, float>;
 template class MaxPool3dGradFunctor<lite::TargetType::kX86, double>;
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool3dFunctor<lite::TargetType::kX86,
                              lite::x86::math::MaxPool<float>,
                              float>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool3dFunctor<lite::TargetType::kX86,
                              lite::x86::math::AvgPool<float>,
                              float>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool3dGradFunctor<lite::TargetType::kX86,
                                  lite::x86::math::MaxPoolGrad<float>,
                                  float>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool3dGradFunctor<lite::TargetType::kX86,
                                  lite::x86::math::AvgPoolGrad<float>,
                                  float>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool3dFunctor<lite::TargetType::kX86,
                              lite::x86::math::MaxPool<double>,
                              double>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool3dFunctor<lite::TargetType::kX86,
                              lite::x86::math::AvgPool<double>,
                              double>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool3dGradFunctor<lite::TargetType::kX86,
                                  lite::x86::math::MaxPoolGrad<double>,
                                  double>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class Pool3dGradFunctor<lite::TargetType::kX86,
                                  lite::x86::math::AvgPoolGrad<double>,
                                  double>;
@@ -624,6 +641,7 @@ template class Pool3dGradFunctor<lite::TargetType::kX86,
  * Ksize, strides, paddings are two elements. These two elements represent
  * height and width, respectively.
  */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T1, typename T2>
 class MaxPool2dWithIndexFunctor<lite::TargetType::kX86, T1, T2> {
  public:
@@ -705,6 +723,7 @@ class MaxPool2dWithIndexFunctor<lite::TargetType::kX86, T1, T2> {
  * Ksize, strides, paddings are two elements. These two elements represent
  * height and width, respectively.
  */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T1, typename T2>
 class MaxPool2dWithIndexGradFunctor<lite::TargetType::kX86, T1, T2> {
  public:
@@ -748,10 +767,12 @@ class MaxPool2dWithIndexGradFunctor<lite::TargetType::kX86, T1, T2> {
 };
 
 template class MaxPool2dWithIndexFunctor<lite::TargetType::kX86, float, int>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class MaxPool2dWithIndexGradFunctor<lite::TargetType::kX86,
                                              float,
                                              int>;
 template class MaxPool2dWithIndexFunctor<lite::TargetType::kX86, double, int>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class MaxPool2dWithIndexGradFunctor<lite::TargetType::kX86,
                                              double,
                                              int>;
@@ -761,6 +782,7 @@ template class MaxPool2dWithIndexGradFunctor<lite::TargetType::kX86,
  * Ksize, strides, paddings are three elements. These three elements represent
  * depth, height and width, respectively.
  */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T1, typename T2>
 class MaxPool3dWithIndexFunctor<lite::TargetType::kX86, T1, T2> {
  public:
@@ -862,6 +884,7 @@ class MaxPool3dWithIndexFunctor<lite::TargetType::kX86, T1, T2> {
  * Ksize, strides, paddings are three elements. These three elements represent
  * depth, height and width, respectively.
  */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T1, typename T2>
 class MaxPool3dWithIndexGradFunctor<lite::TargetType::kX86, T1, T2> {
  public:
@@ -910,10 +933,12 @@ class MaxPool3dWithIndexGradFunctor<lite::TargetType::kX86, T1, T2> {
 };
 
 template class MaxPool3dWithIndexFunctor<lite::TargetType::kX86, float, int>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class MaxPool3dWithIndexGradFunctor<lite::TargetType::kX86,
                                              float,
                                              int>;
 template class MaxPool3dWithIndexFunctor<lite::TargetType::kX86, double, int>;
+__attribute__((target("avx,avx2,fma,f16c")))
 template class MaxPool3dWithIndexGradFunctor<lite::TargetType::kX86,
                                              double,
                                              int>;

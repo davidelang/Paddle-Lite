@@ -21,11 +21,6 @@ limitations under the License. */
 #endif
 #ifdef __SSE__
 #include <xmmintrin.h>
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-
 #endif
 
 namespace paddle {
@@ -37,6 +32,7 @@ static bool is_a_ge_zero_and_a_lt_b(int a, int b) {
   return static_cast<unsigned>(a) < static_cast<unsigned>(b);
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void col2im(const float* data_col,
             const int channels,
             const int height,
@@ -85,6 +81,7 @@ void col2im(const float* data_col,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void conv_transpose_depthwise_s1(const float* dst,
                                  const float* weights,
                                  const int channels,
@@ -254,6 +251,7 @@ void conv_transpose_depthwise_s1(const float* dst,
   TargetFree(TARGET(kX86), zero_ptr);
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void conv_transpose_depthwise_s2(const float* dst,
                                  const float* weights,
                                  const int channels,

@@ -16,11 +16,6 @@
 
 #include <utility>
 
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-
-
 namespace paddle {
 namespace lite {
 namespace x86 {

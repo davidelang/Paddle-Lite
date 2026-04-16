@@ -15,11 +15,6 @@ limitations under the License. */
 #include "lite/backends/x86/math/avx/conv_utils.h"
 #include <algorithm>
 
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-
-
 namespace paddle {
 namespace lite {
 namespace x86 {
@@ -27,6 +22,7 @@ namespace math {
 
 // tranpose [chout, chin, wh, ww] to [chout/block,chin,wh,ww,block]
 // dout space should be allocated before calling conv_trans_weights_numc
+__attribute__((target("avx,avx2,fma,f16c")))
 void conv_trans_weights_numc(const float* din,
                              float* dout,  // dout has been expanded
                              int chout,
@@ -60,6 +56,7 @@ void conv_trans_weights_numc(const float* din,
 // tranpose [chout,chin,wh,ww] to [chout/block,wh,ww,chin,block]
 // this function is different from conv_trans_weights_numc just
 // in that we make chw->hwc
+__attribute__((target("avx,avx2,fma,f16c")))
 void conv_trans_weights_numc_c3(const float* din,
                                 float* dout,
                                 int chout,
@@ -122,6 +119,7 @@ static inline void transpose4x8_ps(__m256& row0,  // NOLINT
 
 // input  [bs, ic, ih, iw] => [bs, ic/8, ih, iw, 8]
 // filter [oc, 01, ih, iw] => [01, ic/8, ih, iw, 8] for depthwise
+__attribute__((target("avx,avx2,fma,f16c")))
 void pack8_m256(lite::Tensor* input,
                 lite::Tensor* output,
                 const int channel_num,
@@ -216,6 +214,7 @@ void pack8_m256(lite::Tensor* input,
 
 // input  [bs, ic, ih, iw] => [bs, ic/4, ih, iw, 4]
 // filter [oc, 01, ih, iw] => [01, ic/4, ih, iw, 4] for depthwise
+__attribute__((target("avx,avx2,fma,f16c")))
 void pack4_m128(lite::Tensor* input,
                 lite::Tensor* output,
                 const int channel_num,
@@ -434,6 +433,7 @@ void unpack4_m128(lite::Tensor* input, lite::Tensor* output) {
   }    // end of for bs
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void padding8_m256(lite::Tensor* input,
                    lite::Tensor* output,
                    const std::vector<int>& paddings) {
@@ -500,6 +500,7 @@ void padding8_m256(lite::Tensor* input,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void padding4_m128(lite::Tensor* input,
                    lite::Tensor* output,
                    const std::vector<int>& paddings) {
@@ -566,6 +567,7 @@ void padding4_m128(lite::Tensor* input,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void padding1_float(lite::Tensor* input,
                     lite::Tensor* output,
                     const std::vector<int>& paddings) {
@@ -619,6 +621,7 @@ void padding1_float(lite::Tensor* input,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void pack_padding8_m256(lite::Tensor* input,
                         lite::Tensor* output,
                         const int channel_num,
@@ -739,6 +742,7 @@ void pack_padding8_m256(lite::Tensor* input,
 
 // input  [bs, ic, ih, iw] => [bs, (ic + 7)/8, ih, iw, 8]
 // filter [oc, 01, ih, iw] => [01, (ic + 7)/8, ih, iw, 8] for depthwise
+__attribute__((target("avx,avx2,fma,f16c")))
 void packC8_common(const float* din,
                    float* dout,
                    const std::vector<int>& pad,
@@ -877,6 +881,7 @@ void packC8_common(const float* din,
 }
 
 // output_trans [bs, (oc + 7)/8, oh, ow, 8] => output [bs, oc, oh, ow]
+__attribute__((target("avx,avx2,fma,f16c")))
 void unpackC8_common(const float* din,
                      float* dout,
                      int size_out_channel,
@@ -978,6 +983,7 @@ void unpackC8_common(const float* din,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 __m256 activation8_m256(__m256 input,
                         const lite_api::ActivationType act_type,
                         const operators::ActivationParam act_param) {
@@ -1076,7 +1082,9 @@ inline bool is_a_ge_zero_and_a_lt_b(int a, int b) {
  * @param stride
  * @param data_col
  */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename Dtype>
+__attribute__((target("avx,avx2,fma,f16c")))
 void im2col_common(const Dtype* data_im,
                    int channels,
                    int height,
@@ -1128,7 +1136,9 @@ void im2col_common(const Dtype* data_im,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <>
+__attribute__((target("avx,avx2,fma,f16c")))
 void im2col_s1<float>(const float* data_im,
                       int channels,
                       int height,
@@ -1199,7 +1209,9 @@ void im2col_s1<float>(const float* data_im,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <>
+__attribute__((target("avx,avx2,fma,f16c")))
 void im2col_s2<float>(const float* data_im,
                       int channels,
                       int height,
@@ -1282,7 +1294,9 @@ void im2col_s2<float>(const float* data_im,
  * @param stride
  * @param data_col
  */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <>
+__attribute__((target("avx,avx2,fma,f16c")))
 void im2col<float>(const float* data_im,
                    int channels,
                    int height,
@@ -1350,7 +1364,9 @@ void im2col<float>(const float* data_im,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <>
+__attribute__((target("avx,avx2,fma,f16c")))
 void im2col<int8_t>(const int8_t* data_im,
                     int channels,
                     int height,

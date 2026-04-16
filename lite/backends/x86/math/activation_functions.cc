@@ -17,11 +17,6 @@ limitations under the License. */
 #include "lite/backends/x86/math/activation_functions.h"
 #include "lite/backends/x86/math/avx/avx_mathfuns.h"
 
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-
-
 namespace paddle {
 namespace lite {
 namespace x86 {

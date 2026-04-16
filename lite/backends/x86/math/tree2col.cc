@@ -16,11 +16,6 @@
 #include <deque>
 #include <stack>
 
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-
-
 namespace paddle {
 namespace lite {
 namespace x86 {
@@ -56,6 +51,7 @@ std::vector<TreeNode> Tree2ColUtil::construct_patch(
   return patch;
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void Tree2ColUtil::construct_tree(const lite::Tensor &EdgeSet,
                                   std::vector<std::vector<int>> *tr,
                                   size_t *node_count) {
@@ -83,6 +79,7 @@ void Tree2ColUtil::construct_tree(const lite::Tensor &EdgeSet,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class Tree2ColFunctor<lite::TargetType::kX86, T> {
  public:
@@ -139,6 +136,7 @@ class Tree2ColFunctor<lite::TargetType::kX86, T> {
                    static_cast<int64_t>(patch_elem_size)});
   }
 };
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class Col2TreeFunctor<lite::TargetType::kX86, T> {
  public:

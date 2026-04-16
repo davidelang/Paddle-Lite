@@ -14,11 +14,6 @@ limitations under the License. */
 
 #include "lite/backends/x86/math/sample_prob.h"
 
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-
-
 namespace paddle {
 namespace lite {
 namespace x86 {

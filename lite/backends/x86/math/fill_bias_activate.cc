@@ -22,11 +22,6 @@ limitations under the License. */
 #endif
 #ifdef __SSE__
 #include <xmmintrin.h>
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-
 #endif
 
 namespace paddle {
@@ -479,6 +474,7 @@ static void activate_none_inplace_bias(float *data,
   }
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 void fill_bias_act(float *tensor,
                    const float *bias,
                    int channel,

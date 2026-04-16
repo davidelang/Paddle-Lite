@@ -43,11 +43,6 @@
 */
 #include "lite/backends/x86/math/avx/avx_mathfuns.h"
 
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-
-
 #if 1
 namespace paddle {
 namespace lite {

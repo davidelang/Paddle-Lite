@@ -27,11 +27,6 @@ limitations under the License. */
 #include "lite/backends/x86/fluid/float16.h"
 #include "lite/backends/x86/math/math_function_impl.h"
 
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-
-
 namespace paddle {
 namespace lite {
 namespace x86 {
@@ -77,7 +72,9 @@ struct TensorSetConstantCPU {
   float value_;
 };
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <>
+__attribute__((target("avx,avx2,fma,f16c")))
 void set_constant_with_place<lite::TargetType::kX86>(
     const lite::Context<lite::TargetType::kX86>& context,
     lite::Tensor* tensor,
@@ -86,6 +83,7 @@ void set_constant_with_place<lite::TargetType::kX86>(
   TensorSetConstantCPU(tensor, value).apply<float>();
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <lite::TargetType Target>
 struct TensorSetConstantWithTarget /*: public boost::static_visitor<void>*/ {
   TensorSetConstantWithTarget(const lite::Context<Target>& context,
@@ -102,7 +100,9 @@ struct TensorSetConstantWithTarget /*: public boost::static_visitor<void>*/ {
   float value_;
 };
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <lite::TargetType Target>
+__attribute__((target("avx,avx2,fma,f16c")))
 void set_constant(const lite::Context<Target>& context,
                   lite::Tensor* tensor,
                   float value) {
@@ -110,6 +110,7 @@ void set_constant(const lite::Context<Target>& context,
   func();
 }
 
+__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 struct RowwiseAdd<lite::TargetType::kX86, T> {
   void operator()(const lite::Context<lite::TargetType::kX86>& context,

@@ -16,11 +16,6 @@ limitations under the License. */
 #include <vector>
 #include "lite/utils/log/cp_logging.h"
 
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-
-
 namespace paddle {
 namespace lite {
 namespace x86 {
@@ -32,6 +27,7 @@ namespace math {
  *   [input_channels, filter_depth, filter_height, filter_width,
  *                    output_depth, output_height, output_width]
  */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <class T>
 class Vol2ColFunctor<lite::TargetType::kX86, T> {
  public:
@@ -118,6 +114,7 @@ class Vol2ColFunctor<lite::TargetType::kX86, T> {
  *   [input_channels, filter_depth, filter_height, filter_width,
  *                    output_depth, output_height, output_width]
  */
+__attribute__((target("avx,avx2,fma,f16c")))
 template <class T>
 class Col2VolFunctor<lite::TargetType::kX86, T> {
  public:

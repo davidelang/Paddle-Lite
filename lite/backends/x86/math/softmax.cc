@@ -15,11 +15,6 @@ limitations under the License. */
 #include "lite/backends/x86/math/softmax.h"
 #include "lite/backends/x86/math/softmax_impl.h"
 
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-
-
 namespace paddle {
 namespace lite {
 namespace x86 {
