@@ -286,7 +286,20 @@ template class Col2ImFunctor<lite::x86::math::ColFormat::kOCF,
                              lite::TargetType::kX86,
                              double>;
 
+
+namespace paddle {
+namespace lite {
+namespace x86 {
+namespace math {
+template class Im2ColFunctor<lite::x86::math::ColFormat::kCFO, lite::TargetType::kX86, signed char>;
+template class Col2ImFunctor<lite::x86::math::ColFormat::kCFO, lite::TargetType::kX86, signed char>;
+template class Im2ColFunctor<lite::x86::math::ColFormat::kOCF, lite::TargetType::kX86, signed char>;
+template class Col2ImFunctor<lite::x86::math::ColFormat::kOCF, lite::TargetType::kX86, signed char>;
 }  // namespace math
+}  // namespace x86
+}  // namespace lite
+}  // namespace paddle
+\n}  // namespace math
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle

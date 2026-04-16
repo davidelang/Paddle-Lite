@@ -32,8 +32,8 @@ IF(NOT ${CBLAS_FOUND})
     ENDIF(WIN32)
 
     IF (NOT WIN32)
-    SET(OPENBLAS_CC "${CMAKE_C_COMPILER} -Wno-unused-but-set-variable -Wno-unused-variable")
-    SET(OPENBLAS_COMMIT "v0.2.20")
+    SET(OPENBLAS_CC "${CMAKE_C_COMPILER} --target=x86_64-none-linux-android21 --sysroot=/opt/android-ndk-r20b/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Wno-unused-but-set-variable -Wno-unused-variable")
+    SET(OPENBLAS_COMMIT "v0.3.27")
 
     IF(APPLE)
         SET(OPENBLAS_CC "${CMAKE_C_COMPILER} -isysroot ${CMAKE_OSX_SYSROOT}")
@@ -43,7 +43,7 @@ IF(NOT ${CBLAS_FOUND})
         SET(OPTIONAL_ARGS DYNAMIC_ARCH=1 NUM_THREADS=64)
     ENDIF()
 
-    SET(COMMON_ARGS CC=${OPENBLAS_CC} NO_SHARED=1 NO_LAPACK=1 libs)
+    SET(COMMON_ARGS CC=${OPENBLAS_CC} HOSTCC=gcc NO_SHARED=1 NO_LAPACK=1 libs)
     ExternalProject_Add(
         extern_openblas
         ${EXTERNAL_PROJECT_LOG_ARGS}
