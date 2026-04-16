@@ -26,7 +26,9 @@
 
 #if !defined(_WIN32)
 #include <dlfcn.h>     //  dladdr
+#ifndef LITE_WITH_ANDROID
 #include <execinfo.h>  // backtrace
+#endif
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <algorithm>  // std::accumulate

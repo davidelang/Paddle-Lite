@@ -60,7 +60,8 @@ class DDimLite {
 
   std::string repr() const;
 
-  friend STL::ostream &operator<<(STL::ostream &os, const DDimLite &dims) {
+  // For Desktop/Standard C++ environments (Full API / Desktop Linux)
+  friend std::ostream &operator<<(std::ostream &os, const DDimLite &dims) {
     os << dims.repr();
     return os;
   }
@@ -88,5 +89,22 @@ class DDimLite {
 using DDim = paddle::lite::DDimLite;
 }  // namespace lite
 }  // namespace paddle
+
+// For Android Mobile environments (Tiny Publish with replace_stl)
+// We ONLY do this if we are using the custom replace_stl engine
+#if defined(LITE_ON_TINY_PUBLISH) && !defined(TARGET_IOS)
+namespace paddle {
+namespace lite {
+namespace replace_stl {
+// If STL is an alias for replace_stl, we need this specialization
+template <>
+inline ostream& ostream::operator<<(const DDimLite& obj) {
+  *this << obj.repr();
+  return *this;
+}
+}  // namespace replace_stl
+}  // namespace lite
+}  // namespace paddle
+#endif
 
 #endif  // LITE_CORE_DIM_H_
