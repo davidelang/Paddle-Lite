@@ -17,11 +17,9 @@ limitations under the License. */
 #include <vector>
 #include "lite/backends/x86/math/math_function.h"
 
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC target("avx,avx2,fma,f16c")
 #endif
-__attribute__((target("avx,avx2,fma,f16c")))
 
 
 namespace paddle {

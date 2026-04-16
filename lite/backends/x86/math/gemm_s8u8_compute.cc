@@ -17,11 +17,9 @@ limitations under the License. */
 #include "lite/backends/x86/math/gemm_s8u8_compute.h"
 #include <cmath>
 
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC target("avx,avx2,fma,f16c")
 #endif
-__attribute__((target("avx,avx2,fma,f16c")))
 
 
 namespace paddle {
