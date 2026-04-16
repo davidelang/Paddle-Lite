@@ -1,9 +1,3 @@
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-__attribute__((target("avx,avx2,fma,f16c")))
-#include <immintrin.h> // UNGUARDED
 // Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,12 +16,18 @@ __attribute__((target("avx,avx2,fma,f16c")))
 #include <immintrin.h>
 #include <cmath>
 
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void instance_norm(const float* in,
                    float* out,
                    const int n,

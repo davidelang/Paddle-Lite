@@ -1,8 +1,3 @@
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-__attribute__((target("avx,avx2,fma,f16c")))
 /* Copyright (c) 2016 PaddlePaddle Authors. All Rights Reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,6 +13,13 @@ limitations under the License. */
 #include "lite/backends/x86/math/blas.h"
 #include "lite/backends/x86/math/gru_cpu_kernel.h"
 #include "lite/backends/x86/math/gru_kernel.h"
+
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+
 
 namespace paddle {
 namespace lite {

@@ -1,12 +1,3 @@
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-__attribute__((target("avx,avx2,fma,f16c")))
-#include <immintrin.h> // UNGUARDED
-#if defined(__x86_64__) || defined(__i386__)
-#include <immintrin.h>
-#endif
 // Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,11 +18,17 @@ __attribute__((target("avx,avx2,fma,f16c")))
 #include "lite/backends/x86/math/avx/avx_mathfuns.h"
 #include "lite/backends/x86/math/saturate.h"
 
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void fp32_to_int8(const float* din,
                   int8_t* dout,
                   const float* scale,
@@ -160,7 +157,6 @@ void fp32_to_int8(const float* din,
   }
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void int8_to_fp32(const int8_t* in,
                   float* out,
                   const float* scale,
@@ -221,9 +217,9 @@ void int8_to_fp32(const int8_t* in,
       __m128i v03 = _mm_cvtepi8_epi32(vin3);
       // int32 -> fp32
       __m128 vout0 = _mm_mul_ps(_mm_cvtepi32_ps(v00), vscale);
-      __m128 vout1 = _mm_mul_ps(_mm_cvtepi32_ps(v01), vscale);
-      __m128 vout2 = _mm_mul_ps(_mm_cvtepi32_ps(v02), vscale);
-      __m128 vout3 = _mm_mul_ps(_mm_cvtepi32_ps(v03), vscale);
+      __m128 vout1 = _mm_mul_ps(mm_cvtepi32_ps(v01), vscale);
+      __m128 vout2 = _mm_mul_ps(mm_cvtepi32_ps(v02), vscale);
+      __m128 vout3 = _mm_mul_ps(mm_cvtepi32_ps(v03), vscale);
       _mm_storeu_ps(dout_c, vout0);
       _mm_storeu_ps(dout_c + 4, vout1);
       _mm_storeu_ps(dout_c + 8, vout2);

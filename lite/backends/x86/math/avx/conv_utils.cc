@@ -1,10 +1,3 @@
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-__attribute__((target("avx,avx2,fma,f16c")))
-#include <immintrin.h> // UNGUARDED
-#include <immintrin.h>
 /* Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +15,13 @@ limitations under the License. */
 #include "lite/backends/x86/math/avx/conv_utils.h"
 #include <algorithm>
 
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
@@ -29,7 +29,6 @@ namespace math {
 
 // tranpose [chout, chin, wh, ww] to [chout/block,chin,wh,ww,block]
 // dout space should be allocated before calling conv_trans_weights_numc
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_trans_weights_numc(const float* din,
                              float* dout,  // dout has been expanded
                              int chout,
@@ -63,7 +62,6 @@ void conv_trans_weights_numc(const float* din,
 // tranpose [chout,chin,wh,ww] to [chout/block,wh,ww,chin,block]
 // this function is different from conv_trans_weights_numc just
 // in that we make chw->hwc
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_trans_weights_numc_c3(const float* din,
                                 float* dout,
                                 int chout,
@@ -93,7 +91,6 @@ void conv_trans_weights_numc_c3(const float* din,
 }
 
 // function: input-4x8, output-8x4
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 static inline void transpose4x8_ps(__m256& row0,  // NOLINT
                                    __m256& row1,  // NOLINT
                                    __m256& row2,  // NOLINT
@@ -127,7 +124,6 @@ static inline void transpose4x8_ps(__m256& row0,  // NOLINT
 
 // input  [bs, ic, ih, iw] => [bs, ic/8, ih, iw, 8]
 // filter [oc, 01, ih, iw] => [01, ic/8, ih, iw, 8] for depthwise
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void pack8_m256(lite::Tensor* input,
                 lite::Tensor* output,
                 const int channel_num,
@@ -222,7 +218,6 @@ void pack8_m256(lite::Tensor* input,
 
 // input  [bs, ic, ih, iw] => [bs, ic/4, ih, iw, 4]
 // filter [oc, 01, ih, iw] => [01, ic/4, ih, iw, 4] for depthwise
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void pack4_m128(lite::Tensor* input,
                 lite::Tensor* output,
                 const int channel_num,
@@ -296,7 +291,6 @@ void pack4_m128(lite::Tensor* input,
 }
 
 // output_trans [bs, oc/8, oh, ow, 8] => output [bs, oc, oh, ow]
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void unpack8_m256(lite::Tensor* input, lite::Tensor* output) {
   CHECK_EQ(input->dims().size(), 5UL);
   const int batch_size = input->dims()[0];
@@ -380,7 +374,6 @@ void unpack8_m256(lite::Tensor* input, lite::Tensor* output) {
 }
 
 // output_trans [bs, oc/4, oh, ow, 4] => output [bs, oc, oh, ow]
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void unpack4_m128(lite::Tensor* input, lite::Tensor* output) {
   CHECK_EQ(input->dims().size(), 5UL);
   const int batch_size = input->dims()[0];
@@ -443,7 +436,6 @@ void unpack4_m128(lite::Tensor* input, lite::Tensor* output) {
   }    // end of for bs
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void padding8_m256(lite::Tensor* input,
                    lite::Tensor* output,
                    const std::vector<int>& paddings) {
@@ -510,7 +502,6 @@ void padding8_m256(lite::Tensor* input,
   }
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void padding4_m128(lite::Tensor* input,
                    lite::Tensor* output,
                    const std::vector<int>& paddings) {
@@ -577,7 +568,6 @@ void padding4_m128(lite::Tensor* input,
   }
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void padding1_float(lite::Tensor* input,
                     lite::Tensor* output,
                     const std::vector<int>& paddings) {
@@ -631,7 +621,6 @@ void padding1_float(lite::Tensor* input,
   }
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void pack_padding8_m256(lite::Tensor* input,
                         lite::Tensor* output,
                         const int channel_num,
@@ -752,7 +741,6 @@ void pack_padding8_m256(lite::Tensor* input,
 
 // input  [bs, ic, ih, iw] => [bs, (ic + 7)/8, ih, iw, 8]
 // filter [oc, 01, ih, iw] => [01, (ic + 7)/8, ih, iw, 8] for depthwise
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void packC8_common(const float* din,
                    float* dout,
                    const std::vector<int>& pad,
@@ -891,7 +879,6 @@ void packC8_common(const float* din,
 }
 
 // output_trans [bs, (oc + 7)/8, oh, ow, 8] => output [bs, oc, oh, ow]
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void unpackC8_common(const float* din,
                      float* dout,
                      int size_out_channel,
@@ -1092,7 +1079,6 @@ inline bool is_a_ge_zero_and_a_lt_b(int a, int b) {
  * @param data_col
  */
 template <typename Dtype>
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void im2col_common(const Dtype* data_im,
                    int channels,
                    int height,

@@ -1,10 +1,3 @@
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-__attribute__((target("avx,avx2,fma,f16c")))
-#include <immintrin.h> // UNGUARDED
-// TEST_PATCH
 /* Copyright (c) 2018 paddlepaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +22,13 @@ limitations under the License. */
 #endif
 #ifdef __SSE__
 #include <xmmintrin.h>
+
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+
 #endif
 
 namespace paddle {
@@ -36,7 +36,6 @@ namespace lite {
 namespace x86 {
 namespace math {
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 static void activate_relu_inplace(float *data, int len, float alpha, int mode) {
   int i = 0;
 
@@ -85,7 +84,6 @@ static void activate_relu_inplace(float *data, int len, float alpha, int mode) {
   }
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 static void activate_relu_inplace_bias(float *data,
                                        const float *bias,
                                        int channel,
@@ -167,7 +165,6 @@ static void activate_relu_inplace_bias(float *data,
   }
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 static void activate_lrelu_inplace(float *data, int len, float alpha) {
   const int cmp_le_os = 2;
   int i = 0;
@@ -198,7 +195,6 @@ static void activate_lrelu_inplace(float *data, int len, float alpha) {
   }
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 static void activate_lrelu_inplace_bias(float *data,
                                         const float *bias,
                                         int channel,
@@ -252,7 +248,6 @@ static void activate_lrelu_inplace_bias(float *data,
   }
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 static void activate_hardswish_inplace_bias(float *data,
                                             const float *bias,
                                             int channel,
@@ -357,7 +352,6 @@ static void activate_hardswish_inplace_bias(float *data,
   }
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 static void activate_hardswish_inplace(
     float *data, int len, float scale, float threshold, float offset) {
 #if 1
@@ -445,7 +439,6 @@ static void activate_hardswish_inplace(
   }
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 static void activate_none_inplace_bias(float *data,
                                        const float *bias,
                                        int channel,
@@ -488,7 +481,6 @@ static void activate_none_inplace_bias(float *data,
   }
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void fill_bias_act(float *tensor,
                    const float *bias,
                    int channel,

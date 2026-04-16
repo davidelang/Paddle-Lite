@@ -1,9 +1,3 @@
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-__attribute__((target("avx,avx2,fma,f16c")))
-#include <immintrin.h> // UNGUARDED
 // Copyright (c) 2019 PaddlePaddle Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,13 +25,19 @@ __attribute__((target("avx,avx2,fma,f16c")))
 #include <algorithm>
 #include <cmath>
 
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
 template <>
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void mish(const float* din, float* dout, int size, float threshold) {
 #if 1
   int cnt = size >> 3;
@@ -142,7 +142,6 @@ void mish(const float* din, float* dout, int size, float threshold) {
 }
 
 template <>
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void hard_swish(const float* din,
                 float* dout,
                 int size,

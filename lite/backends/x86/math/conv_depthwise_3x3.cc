@@ -1,9 +1,3 @@
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-__attribute__((target("avx,avx2,fma,f16c")))
-#include <immintrin.h> // UNGUARDED
 /* Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +23,13 @@ limitations under the License. */
 #else
 #include <smmintrin.h>
 #include <xmmintrin.h>
+
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+
 #endif
 
 namespace paddle {
@@ -37,7 +38,6 @@ namespace x86 {
 namespace math {
 #define Max(a, b) (a > b ? a : b)
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_depthwise_3x3s2_p01_direct(
     const float *din,
     float *dout,
@@ -616,7 +616,6 @@ void conv_depthwise_3x3s2_p01_direct(
   TargetFree(TARGET(kX86), write_ptr);
 #endif
 }
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_depthwise_3x3s1_p01_direct(
     const float *din,
     float *dout,
@@ -1332,7 +1331,6 @@ void conv_depthwise_3x3s1_p01_direct(
 #endif
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_depthwise_3x3_pack(const operators::ConvParam &param,
                              lite::Tensor *input_padding_,
                              lite::Tensor *input_pack_,

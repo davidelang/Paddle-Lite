@@ -1,9 +1,3 @@
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-__attribute__((target("avx,avx2,fma,f16c")))
-#include <immintrin.h> // UNGUARDED
 // Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +16,13 @@ __attribute__((target("avx,avx2,fma,f16c")))
 #include <immintrin.h>
 #include <cmath>
 #include "lite/backends/x86/math/avx/avx_mathfuns.h"
+
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+
 
 namespace paddle {
 namespace lite {

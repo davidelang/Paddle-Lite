@@ -1,10 +1,3 @@
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-__attribute__((target("avx,avx2,fma,f16c")))
-#include <immintrin.h> // UNGUARDED
-#include <immintrin.h>
 /* Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,13 +21,19 @@ limitations under the License. */
 #include "lite/backends/x86/math/sse/conv_utils.h"
 #include "lite/core/memory.h"
 
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 #define Min(a, b) (a < b ? a : b)
 #define ROUNDUP(a, b) ((((a) + (b)-1) / (b)) * (b))
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_depthwise_5x5s1(const float* din,
                           float* dout,
                           int num,
@@ -415,7 +414,6 @@ void conv_depthwise_5x5s1(const float* din,
   TargetFree(TARGET(kX86), pack_input);
   TargetFree(TARGET(kX86), pack_out);
 }
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_depthwise_5x5s2(const float* din,
                           float* dout,
                           int num,

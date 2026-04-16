@@ -1,8 +1,3 @@
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-__attribute__((target("avx,avx2,fma,f16c")))
 /* Copyright (c) 2016 PaddlePaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +16,13 @@ limitations under the License. */
 #include <vector>
 #include "lite/backends/x86/math/im2col_cfo_cpu.h"
 #include "lite/utils/log/cp_logging.h"
+
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+
 
 namespace paddle {
 namespace lite {
@@ -295,11 +297,7 @@ template class Col2ImFunctor<lite::x86::math::ColFormat::kOCF,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
-
-namespace paddle {
-namespace lite {
-namespace x86 {
-namespace math {
+namespace paddle { namespace lite { namespace x86 { namespace math {
 template class Im2ColFunctor<lite::x86::math::ColFormat::kCFO, lite::TargetType::kX86, signed char>;
 template class Col2ImFunctor<lite::x86::math::ColFormat::kCFO, lite::TargetType::kX86, signed char>;
 template class Im2ColFunctor<lite::x86::math::ColFormat::kOCF, lite::TargetType::kX86, signed char>;

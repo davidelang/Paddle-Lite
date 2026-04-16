@@ -1,10 +1,3 @@
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-__attribute__((target("avx,avx2,fma,f16c")))
-#include <immintrin.h> // UNGUARDED
-#include <immintrin.h>
 //  Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,6 +42,13 @@ __attribute__((target("avx,avx2,fma,f16c")))
   (this is the zlib license)
 */
 #include "lite/backends/x86/math/avx/avx_mathfuns.h"
+
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+
 
 #if 1
 namespace paddle {
@@ -376,7 +376,7 @@ v8sf sin256_ps(v8sf x) {  // any x
   If we don't have AVX, let's perform them using SSE2 directives
 */
 
-#if 1 // Forced on via target attribute
+#if 1
   /* store the integer part of y in mm0 */
   imm2 = _mm256_cvttps_epi32(y);
   /* j=(j+1) & (~1) (see the cephes sources) */
@@ -494,7 +494,7 @@ v8sf cos256_ps(v8sf x) {  // any x
   /* scale by 4/Pi */
   y = _mm256_mul_ps(x, *(v8sf *)_ps256_cephes_FOPI);  // NOLINT
 
-#if 1 // Forced on via target attribute
+#if 1
   /* store the integer part of y in mm0 */
   imm2 = _mm256_cvttps_epi32(y);
   /* j=(j+1) & (~1) (see the cephes sources) */
@@ -597,7 +597,6 @@ v8sf cos256_ps(v8sf x) {  // any x
 /* since sin256_ps and cos256_ps are almost identical, sincos256_ps could
    replace both of them..
    it is almost as fast, and gives you a free cosine with your sine */
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void sincos256_ps(v8sf x, v8sf *s, v8sf *c) {
   v8sf xmm1, xmm2, xmm3 = _mm256_setzero_ps(), sign_bit_sin, y;
   v8si imm0, imm2, imm4;
@@ -618,7 +617,7 @@ void sincos256_ps(v8sf x, v8sf *s, v8sf *c) {
   /* scale by 4/Pi */
   y = _mm256_mul_ps(x, *(v8sf *)_ps256_cephes_FOPI);  // NOLINT
 
-#if 1 // Forced on via target attribute
+#if 1
   /* store the integer part of y in imm2 */
   imm2 = _mm256_cvttps_epi32(y);
 
@@ -685,7 +684,7 @@ void sincos256_ps(v8sf x, v8sf *s, v8sf *c) {
   x = _mm256_add_ps(x, xmm2);
   x = _mm256_add_ps(x, xmm3);
 
-#if 1 // Forced on via target attribute
+#if 1
   imm4 = avx2_mm256_sub_epi32(imm4, *(v8si *)_pi32_256_2);     // NOLINT
   imm4 = avx2_mm256_andnot_si256(imm4, *(v8si *)_pi32_256_4);  // NOLINT
   imm4 = avx2_mm256_slli_epi32(imm4, 29);

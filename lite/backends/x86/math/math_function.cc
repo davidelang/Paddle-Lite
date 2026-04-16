@@ -1,9 +1,3 @@
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-__attribute__((target("avx,avx2,fma,f16c")))
-#include "lite/core/dim.h"
 /* Copyright (c) 2016 PaddlePaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,6 +26,13 @@ limitations under the License. */
 #include "lite/backends/x86/fluid/data_type.h"
 #include "lite/backends/x86/fluid/float16.h"
 #include "lite/backends/x86/math/math_function_impl.h"
+
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+
 
 namespace paddle {
 namespace lite {
@@ -120,7 +121,7 @@ struct RowwiseAdd<lite::TargetType::kX86, T> {
     const auto& in_dims = input.dims();
     auto size = input.numel() / in_dims[0];
     CHECK_EQ(vector.numel(), size);
-    CHECK(output->dims() == in_dims);
+    CHECK_EQ(output->dims(), in_dims);
 
     const T* input_data = input.data<T>();
     const T* vector_data = vector.data<T>();

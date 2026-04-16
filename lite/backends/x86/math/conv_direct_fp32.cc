@@ -1,9 +1,3 @@
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-__attribute__((target("avx,avx2,fma,f16c")))
-#include <immintrin.h> // UNGUARDED
 /* Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +23,13 @@ limitations under the License. */
 #include <emmintrin.h>
 #endif
 #include "lite/backends/x86/math/conv_direct_fp32.h"
+
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+
 
 namespace paddle {
 namespace lite {
@@ -473,7 +474,6 @@ void conv_direct::run(const float* i_data,
 
 // we always assume oc % BLOCK == 0!
 // convert [N C/8 H W 8] to [N C H W]!
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_direct_transpose_out(int bs,
                                int oc,
                                int oh,

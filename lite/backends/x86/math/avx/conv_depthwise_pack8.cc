@@ -1,10 +1,3 @@
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-__attribute__((target("avx,avx2,fma,f16c")))
-#include <immintrin.h> // UNGUARDED
-#include <immintrin.h>
 /* Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +16,13 @@ limitations under the License. */
 #include <vector>
 #include "lite/backends/x86/math/avx/conv_utils.h"
 
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
@@ -32,7 +32,6 @@ namespace math {
 // filter [1,  oc/8, kh, kw, 8]
 // bias   [    oc             ]
 // output [bs, oc/8, oh, ow, 8]
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_depthwise_3x3s1_m256(lite::Tensor* input,
                                lite::Tensor* output,
                                lite::Tensor* filter,
@@ -456,7 +455,6 @@ void conv_depthwise_3x3s1_m256(lite::Tensor* input,
 // filter [1,  oc/8, kh, kw, 8]
 // bias   [    oc             ]
 // output [bs, oc/8, oh, ow, 8]
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_depthwise_3x3s2_m256(lite::Tensor* input,
                                lite::Tensor* output,
                                lite::Tensor* filter,
@@ -719,7 +717,6 @@ void conv_depthwise_3x3s2_m256(lite::Tensor* input,
 // filter [1,  oc/8, kh, kw, 8]
 // bias   [    oc             ]
 // output [bs, oc/8, oh, ow, 8]
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void conv_depthwise_m256(lite::Tensor* input,
                          lite::Tensor* output,
                          lite::Tensor* filter,

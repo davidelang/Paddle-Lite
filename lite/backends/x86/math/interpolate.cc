@@ -1,10 +1,3 @@
-#include <immintrin.h>
-#ifndef __attribute__
-#define __attribute__(x)
-#endif
-__attribute__((target("avx,avx2,fma,f16c")))
-#include <immintrin.h> // UNGUARDED
-#include <immintrin.h>
 /* Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,12 +17,18 @@ limitations under the License. */
 #include <vector>
 #include "lite/backends/x86/math/math_function.h"
 
+#include <immintrin.h>
+#ifndef __attribute__
+#define __attribute__(x)
+#endif
+__attribute__((target("avx,avx2,fma,f16c")))
+
+
 namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void bilinear_interp(const float* input_data,
                      float* output_data,
                      const float ratio_h,
@@ -476,7 +475,6 @@ void bilinear_interp(const float* input_data,
   lite::host::free(buf);
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void nearest_interp(const float* input_data,
                     float* output_data,
                     const float ratio_h,
@@ -554,7 +552,6 @@ inline std::vector<T> get_new_data_from_tensor(const Tensor* new_data_tensor) {
   return vec_new_data;
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void interpolate(lite::Tensor* input,
                  lite::Tensor* out_size,
                  std::vector<const lite::Tensor*> list_new_size_tensor,
@@ -647,7 +644,6 @@ void interpolate(lite::Tensor* input,
   }
 }
 
-__attribute__((target("avx,avx2,avx512f,avx512vl,avx512bw,avx512dq")))
 void interpolate_v2(lite::Tensor* input,
                     lite::Tensor* out_size,
                     std::vector<const lite::Tensor*> list_new_size_tensor,
