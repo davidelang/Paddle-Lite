@@ -38,8 +38,8 @@ include(os/common)
 # Paddlelite project
 project(paddle CXX C)
 if(ANDROID AND ARM_TARGET_ARCH_ABI STREQUAL "x86_64")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --target=x86_64-none-linux-android21 --sysroot=/opt/android-ndk-r20b/toolchains/llvm/prebuilt/linux-x86_64/sysroot -stdlib=libc++ -mavx -mavx2 -mfma -mf16c")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --target=x86_64-none-linux-android21 --sysroot=/opt/android-ndk-r20b/toolchains/llvm/prebuilt/linux-x86_64/sysroot -mavx -mavx2 -mfma -mf16c")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --target=x86_64-none-linux-android21 --sysroot=/opt/android-ndk-r20b/toolchains/llvm/prebuilt/linux-x86_64/sysroot -stdlib=libc++ -msse4.1 -msse4.2 -mavx")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --target=x86_64-none-linux-android21 --sysroot=/opt/android-ndk-r20b/toolchains/llvm/prebuilt/linux-x86_64/sysroot -msse4.1 -msse4.2 -mavx")
   add_definitions(-DLITE_WITH_ANDROID -DLITE_WITH_LINUX)
 endif()
 
