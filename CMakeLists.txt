@@ -1,3 +1,7 @@
+message(STATUS "DEBUG: LITE_WITH_ARM starting as ${LITE_WITH_ARM}")
+message(STATUS "DEBUG: LITE_WITH_X86 starting as ${LITE_WITH_X86}")
+message(STATUS "DEBUG: CMAKE_COMMAND=${CMAKE_COMMAND}")
+message(STATUS "DEBUG: CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}")
 # Copyright (c) 2016 PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,6 +37,12 @@ include(functions)
 include(os/common)
 # Paddlelite project
 project(paddle CXX C)
+if(ANDROID AND ARM_TARGET_ARCH_ABI STREQUAL "x86_64")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --target=x86_64-none-linux-android21 --sysroot=/opt/android-ndk-r20b/toolchains/llvm/prebuilt/linux-x86_64/sysroot -stdlib=libc++ -mavx -mavx2 -mfma -mf16c")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --target=x86_64-none-linux-android21 --sysroot=/opt/android-ndk-r20b/toolchains/llvm/prebuilt/linux-x86_64/sysroot -mavx -mavx2 -mfma -mf16c")
+  add_definitions(-DLITE_WITH_ANDROID -DLITE_WITH_LINUX)
+endif()
+
 message(STATUS "CXX compiler: ${CMAKE_CXX_COMPILER}, version: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 message(STATUS "C compiler: ${CMAKE_C_COMPILER}, version: ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
 message(STATUS "AR tools: ${CMAKE_AR}")
@@ -109,11 +119,11 @@ message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
 # check options
 if(LITE_ON_TINY_PUBLISH)
-  if(NOT (LITE_WITH_ARM AND NOT WITH_TESTING))#LITE_WITH_JAVA AND
-    message(FATAL_ERROR "LITE_ON_TINY_PUBLISH=ON must be used with LITE_WITH_ARM=ON LITE_WITH_JAVA=ON WITH_TESTING=OFF")
-    return()
+  if(NOT ((LITE_WITH_ARM OR LITE_WITH_X86) AND NOT WITH_TESTING))
+    message(FATAL_ERROR "LITE_ON_TINY_PUBLISH=ON must be used with (LITE_WITH_ARM=ON or LITE_WITH_X86=ON) WITH_TESTING=OFF")
   endif()
 endif()
+
 
 include_directories("${PADDLE_SOURCE_DIR}")
 # the generated header files.
