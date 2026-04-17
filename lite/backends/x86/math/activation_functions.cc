@@ -1,93 +1,13 @@
-/* Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License. */
-
-#ifdef __AVX__
-
-#include "lite/backends/x86/math/activation_functions.h"
-#include "lite/backends/x86/math/avx/avx_mathfuns.h"
-
-#if defined(__clang__) || defined(__GNUC__)
+/* Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.\n\nLicensed under the Apache License, Version 2.0 (the "License");\nyou may not use this file except in compliance with the License.\nYou may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\nUnless required by applicable law or agreed to in writing, software\ndistributed under the License is distributed on an "AS IS" BASIS,\nWITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\nSee the License for the specific language governing permissions and\nlimitations under the License. */\n\n#if 1\n\n#include "lite/backends/x86/math/activation_functions.h"\n#include "lite/backends/x86/math/avx/avx_mathfuns.h"\n
+#if defined(__clang__)
+#pragma clang attribute push (__attribute__((target("avx,avx2,fma,f16c"))), apply_to=any(function))
+#elif defined(__GNUC__)
+#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
-
-namespace paddle {
-namespace lite {
-namespace x86 {
-namespace math {
-namespace detail {
-
-namespace forward {
-namespace avx {
-__m256 Relu(const __m256 a) {
-  __m256 tmp = _mm256_set1_ps(0.0f);
-  return _mm256_max_ps(a, tmp);
-}
-
-__m256 Sigmoid(const __m256 a) {
-  __m256 max = _mm256_set1_ps(SIGMOID_THRESHOLD_MAX);
-  __m256 min = _mm256_set1_ps(SIGMOID_THRESHOLD_MIN);
-  __m256 tmp = _mm256_max_ps(a, min);
-  tmp = _mm256_min_ps(tmp, max);
-  tmp = _mm256_sub_ps(_mm256_set1_ps(0.0f), tmp);
-  tmp = lite::x86::math::exp256_ps(tmp);
-  tmp = _mm256_add_ps(_mm256_set1_ps(1.0f), tmp);
-  tmp = _mm256_div_ps(_mm256_set1_ps(1.0f), tmp);
-  return tmp;
-}
-
-__m256 Tanh(const __m256 a) {
-  __m256 max = _mm256_set1_ps(EXP_MAX_INPUT);
-  __m256 tmp = _mm256_mul_ps(_mm256_set1_ps(-2.0f), a);
-  tmp = _mm256_min_ps(tmp, max);
-  tmp = lite::x86::math::exp256_ps(tmp);
-  return _mm256_sub_ps(_mm256_div_ps(_mm256_set1_ps(2.0f),
-                                     _mm256_add_ps(_mm256_set1_ps(1.0f), tmp)),
-                       _mm256_set1_ps(1.0f));
-}
-
-__m256 Identity(const __m256 a) { return a; }
-
-}  // namespace avx
-}  // namespace forward
-
-namespace backward {
-namespace avx {
-__m256 Relu(const __m256 a, const __m256 b) {
-  return _mm256_mul_ps(
-      a,
-      _mm256_and_ps(_mm256_cmp_ps(b, _mm256_set1_ps(0.0f), _CMP_GT_OS),
-                    _mm256_set1_ps(1.0f)));
-}
-
-__m256 Sigmoid(const __m256 a, const __m256 b) {
-  return _mm256_mul_ps(_mm256_mul_ps(a, b),
-                       _mm256_sub_ps(_mm256_set1_ps(1.0f), b));
-}
-
-__m256 Tanh(const __m256 a, const __m256 b) {
-  return _mm256_mul_ps(
-      a, _mm256_sub_ps(_mm256_set1_ps(1.0f), _mm256_mul_ps(b, b)));
-}
-
-__m256 Identity(const __m256 a, const __m256 b) { return a; }
-}  // namespace avx
-}  // namespace backward
-
-}  // namespace detail
-}  // namespace math
-}  // namespace x86
-}  // namespace lite
-}  // namespace paddle
-
+\n\nnamespace paddle {\nnamespace lite {\nnamespace x86 {\nnamespace math {\nnamespace detail {\n\nnamespace forward {\nnamespace avx {\n__m256 Relu(const __m256 a) {\n  __m256 tmp = _mm256_set1_ps(0.0f);\n  return _mm256_max_ps(a, tmp);\n}\n\n__m256 Sigmoid(const __m256 a) {\n  __m256 max = _mm256_set1_ps(SIGMOID_THRESHOLD_MAX);\n  __m256 min = _mm256_set1_ps(SIGMOID_THRESHOLD_MIN);\n  __m256 tmp = _mm256_max_ps(a, min);\n  tmp = _mm256_min_ps(tmp, max);\n  tmp = _mm256_sub_ps(_mm256_set1_ps(0.0f), tmp);\n  tmp = lite::x86::math::exp256_ps(tmp);\n  tmp = _mm256_add_ps(_mm256_set1_ps(1.0f), tmp);\n  tmp = _mm256_div_ps(_mm256_set1_ps(1.0f), tmp);\n  return tmp;\n}\n\n__m256 Tanh(const __m256 a) {\n  __m256 max = _mm256_set1_ps(EXP_MAX_INPUT);\n  __m256 tmp = _mm256_mul_ps(_mm256_set1_ps(-2.0f), a);\n  tmp = _mm256_min_ps(tmp, max);\n  tmp = lite::x86::math::exp256_ps(tmp);\n  return _mm256_sub_ps(_mm256_div_ps(_mm256_set1_ps(2.0f),\n                                     _mm256_add_ps(_mm256_set1_ps(1.0f), tmp)),\n                       _mm256_set1_ps(1.0f));\n}\n\n__m256 Identity(const __m256 a) { return a; }\n\n}  // namespace avx\n}  // namespace forward\n\nnamespace backward {\nnamespace avx {\n__m256 Relu(const __m256 a, const __m256 b) {\n  return _mm256_mul_ps(\n      a,\n      _mm256_and_ps(_mm256_cmp_ps(b, _mm256_set1_ps(0.0f), _CMP_GT_OS),\n                    _mm256_set1_ps(1.0f)));\n}\n\n__m256 Sigmoid(const __m256 a, const __m256 b) {\n  return _mm256_mul_ps(_mm256_mul_ps(a, b),\n                       _mm256_sub_ps(_mm256_set1_ps(1.0f), b));\n}\n\n__m256 Tanh(const __m256 a, const __m256 b) {\n  return _mm256_mul_ps(\n      a, _mm256_sub_ps(_mm256_set1_ps(1.0f), _mm256_mul_ps(b, b)));\n}\n\n__m256 Identity(const __m256 a, const __m256 b) { return a; }\n}  // namespace avx\n}  // namespace backward\n\n}  // namespace detail\n}  // namespace math\n}  // namespace x86\n}  // namespace lite\n}  // namespace paddle\n\n#endif\n
+#if defined(__clang__)
+#pragma clang attribute pop
+#elif defined(__GNUC__)
+#pragma GCC pop_options
 #endif

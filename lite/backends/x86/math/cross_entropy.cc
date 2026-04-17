@@ -1,82 +1,13 @@
-/* Copyright (c) 2016 PaddlePaddle Authors. All Rights Reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License. */
-
-#include "lite/backends/x86/math/cross_entropy.h"
-
-#if defined(__clang__) || defined(__GNUC__)
+/* Copyright (c) 2016 PaddlePaddle Authors. All Rights Reserved.\n\nLicensed under the Apache License, Version 2.0 (the "License");\nyou may not use this file except in compliance with the License.\nYou may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\nUnless required by applicable law or agreed to in writing, software\ndistributed under the License is distributed on an "AS IS" BASIS,\nWITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\nSee the License for the specific language governing permissions and\nlimitations under the License. */\n\n#include "lite/backends/x86/math/cross_entropy.h"\n
+#if defined(__clang__)
+#pragma clang attribute push (__attribute__((target("avx,avx2,fma,f16c"))), apply_to=any(function))
+#elif defined(__GNUC__)
+#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
-
-namespace paddle {
-namespace lite {
-namespace x86 {
-namespace math {
-
-template <typename T,
-          int MajorType = Eigen::RowMajor,
-          typename IndexType = Eigen::DenseIndex>
-using EigenMatrix = lite::fluid::EigenMatrix<T, MajorType, IndexType>;
-
-template <typename T>
-class CrossEntropyFunctor<lite::TargetType::kX86, T> {
- public:
-  void operator()(const lite::X86Context& ctx,
-                  lite::Tensor* out,
-                  const lite::Tensor* prob,
-                  const lite::Tensor* labels,
-                  const bool softLabel,
-                  const int ignore_index,
-                  const int axis_dim) {
-    const int batch_size = prob->dims()[0];
-    const int num_classes = prob->dims()[1];
-    const int num_remain = num_classes / axis_dim;
-
-    Eigen::DSizes<int, 3> batch_axis_remain(batch_size, axis_dim, num_remain);
-
-    if (softLabel) {
-      auto in = EigenMatrix<T>::From(*prob);
-      auto lbl = EigenMatrix<T>::From(*labels);
-      auto loss = EigenMatrix<T>::From(*out);
-
-      loss.device(lite::fluid::EigenDeviceType<lite::TargetType::kX86>()) =
-          -((lbl * in.log().unaryExpr(math::TolerableValue<T>()))
-                .reshape(batch_axis_remain)
-                .sum(Eigen::DSizes<int, 1>(1)));
-    } else {
-      const T* prob_data = prob->template data<T>();
-      T* loss_data = out->template mutable_data<T>();
-
-      const int64_t* label_data = labels->data<int64_t>();
-      for (int i = 0; i < batch_size; ++i) {
-        for (int j = 0; j < num_remain; j++) {
-          int lbl = label_data[i * num_remain + j];
-          CHECK((lbl >= 0 && lbl < axis_dim) || lbl == ignore_index);
-          int index = i * num_classes + lbl * num_remain + j;
-          int loss_idx = i * num_remain + j;
-          loss_data[loss_idx] =
-              lbl == ignore_index
-                  ? 0
-                  : -math::TolerableValue<T>()(std::log(prob_data[index]));
-        }
-      }
-    }
-  }
-};
-
-template class CrossEntropyFunctor<lite::TargetType::kX86, float>;
-template class CrossEntropyFunctor<lite::TargetType::kX86, double>;
-}  // namespace math
-}  // namespace x86
-}  // namespace lite
-}  // namespace paddle
+\n\nnamespace paddle {\nnamespace lite {\nnamespace x86 {\nnamespace math {\n\ntemplate <typename T,\n          int MajorType = Eigen::RowMajor,\n          typename IndexType = Eigen::DenseIndex>\nusing EigenMatrix = lite::fluid::EigenMatrix<T, MajorType, IndexType>;\n\ntemplate <typename T>\nclass CrossEntropyFunctor<lite::TargetType::kX86, T> {\n public:\n  void operator()(const lite::X86Context& ctx,\n                  lite::Tensor* out,\n                  const lite::Tensor* prob,\n                  const lite::Tensor* labels,\n                  const bool softLabel,\n                  const int ignore_index,\n                  const int axis_dim) {\n    const int batch_size = prob->dims()[0];\n    const int num_classes = prob->dims()[1];\n    const int num_remain = num_classes / axis_dim;\n\n    Eigen::DSizes<int, 3> batch_axis_remain(batch_size, axis_dim, num_remain);\n\n    if (softLabel) {\n      auto in = EigenMatrix<T>::From(*prob);\n      auto lbl = EigenMatrix<T>::From(*labels);\n      auto loss = EigenMatrix<T>::From(*out);\n\n      loss.device(lite::fluid::EigenDeviceType<lite::TargetType::kX86>()) =\n          -((lbl * in.log().unaryExpr(math::TolerableValue<T>()))\n                .reshape(batch_axis_remain)\n                .sum(Eigen::DSizes<int, 1>(1)));\n    } else {\n      const T* prob_data = prob->template data<T>();\n      T* loss_data = out->template mutable_data<T>();\n\n      const int64_t* label_data = labels->data<int64_t>();\n      for (int i = 0; i < batch_size; ++i) {\n        for (int j = 0; j < num_remain; j++) {\n          int lbl = label_data[i * num_remain + j];\n          CHECK((lbl >= 0 && lbl < axis_dim) || lbl == ignore_index);\n          int index = i * num_classes + lbl * num_remain + j;\n          int loss_idx = i * num_remain + j;\n          loss_data[loss_idx] =\n              lbl == ignore_index\n                  ? 0\n                  : -math::TolerableValue<T>()(std::log(prob_data[index]));\n        }\n      }\n    }\n  }\n};\n\ntemplate class CrossEntropyFunctor<lite::TargetType::kX86, float>;\ntemplate class CrossEntropyFunctor<lite::TargetType::kX86, double>;\n}  // namespace math\n}  // namespace x86\n}  // namespace lite\n}  // namespace paddle\n
+#if defined(__clang__)
+#pragma clang attribute pop
+#elif defined(__GNUC__)
+#pragma GCC pop_options
+#endif

@@ -1,101 +1,13 @@
-/* Copyright (c) 2016 PaddlePaddle Authors. All Rights Reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License. */
-
-#include "lite/backends/x86/math/unpooling.h"
-#include "lite/utils/log/cp_logging.h"
-
-#if defined(__clang__) || defined(__GNUC__)
+/* Copyright (c) 2016 PaddlePaddle Authors. All Rights Reserved.\n\nLicensed under the Apache License, Version 2.0 (the "License");\nyou may not use this file except in compliance with the License.\nYou may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\nUnless required by applicable law or agreed to in writing, software\ndistributed under the License is distributed on an "AS IS" BASIS,\nWITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\nSee the License for the specific language governing permissions and\nlimitations under the License. */\n\n#include "lite/backends/x86/math/unpooling.h"\n#include "lite/utils/log/cp_logging.h"\n
+#if defined(__clang__)
+#pragma clang attribute push (__attribute__((target("avx,avx2,fma,f16c"))), apply_to=any(function))
+#elif defined(__GNUC__)
+#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
-
-namespace paddle {
-namespace lite {
-namespace x86 {
-namespace math {
-template <typename T>
-class Unpool2dMaxFunctor<lite::TargetType::kX86, T> {
- public:
-  void operator()(const lite::X86Context& context,
-                  const lite::Tensor& input,
-                  const lite::Tensor& indices,
-                  lite::Tensor* output) {
-    const int batch_size = input.dims()[0];
-    const int input_height = input.dims()[2];
-    const int input_width = input.dims()[3];
-    const int output_channels = output->dims()[1];
-    const int output_height = output->dims()[2];
-    const int output_width = output->dims()[3];
-    int input_feasize = input_height * input_width;
-    int output_feasize = output_height * output_width;
-    const T* input_data = input.data<T>();
-    const int* indices_data = indices.data<int>();
-    T* output_data = output->template mutable_data<T>(lite::TargetType::kX86);
-    for (int b = 0; b < batch_size; ++b) {
-      for (int c = 0; c < output_channels; ++c) {
-        for (int i = 0; i < input_feasize; ++i) {
-          int index = indices_data[i];
-          CHECK(index < output_feasize) << "err index in unpooling!";
-          output_data[index] = input_data[i];
-        }
-        input_data += input_feasize;
-        indices_data += input_feasize;
-        output_data += output_feasize;
-      }
-    }
-  }
-};
-template <class T>
-class Unpool2dMaxGradFunctor<lite::TargetType::kX86, T> {
- public:
-  void operator()(const lite::X86Context& context,
-                  const lite::Tensor& input,
-                  const lite::Tensor& indices,
-                  const lite::Tensor& output,
-                  const lite::Tensor& output_grad,
-                  lite::Tensor* input_grad) {
-    const int batch_size = input.dims()[0];
-    const int input_height = input.dims()[2];
-    const int input_width = input.dims()[3];
-    const int output_channels = output.dims()[1];
-    const int output_height = output.dims()[2];
-    const int output_width = output.dims()[3];
-    int input_feasize = input_height * input_width;
-    int output_feasize = output_height * output_width;
-    const int* indices_data = indices.data<int>();
-    const T* output_grad_data = output_grad.data<T>();
-    T* input_grad_data =
-        input_grad->template mutable_data<T>(lite::TargetType::kX86);
-
-    for (int b = 0; b < batch_size; ++b) {
-      for (int c = 0; c < output_channels; ++c) {
-        for (int i = 0; i < input_feasize; ++i) {
-          int index = indices_data[i];
-          CHECK(index < output_feasize) << "err index in unpooling!";
-          input_grad_data[i] = output_grad_data[index];
-        }
-        input_grad_data += input_feasize;
-        indices_data += input_feasize;
-        output_grad_data += output_feasize;
-      }
-    }
-  }
-};
-template class Unpool2dMaxGradFunctor<lite::TargetType::kX86, float>;
-template class Unpool2dMaxGradFunctor<lite::TargetType::kX86, double>;
-template class Unpool2dMaxFunctor<lite::TargetType::kX86, float>;
-template class Unpool2dMaxFunctor<lite::TargetType::kX86, double>;
-}  // namespace math
-}  // namespace x86
-}  // namespace lite
-}  // namespace paddle
+\n\nnamespace paddle {\nnamespace lite {\nnamespace x86 {\nnamespace math {\ntemplate <typename T>\nclass Unpool2dMaxFunctor<lite::TargetType::kX86, T> {\n public:\n  void operator()(const lite::X86Context& context,\n                  const lite::Tensor& input,\n                  const lite::Tensor& indices,\n                  lite::Tensor* output) {\n    const int batch_size = input.dims()[0];\n    const int input_height = input.dims()[2];\n    const int input_width = input.dims()[3];\n    const int output_channels = output->dims()[1];\n    const int output_height = output->dims()[2];\n    const int output_width = output->dims()[3];\n    int input_feasize = input_height * input_width;\n    int output_feasize = output_height * output_width;\n    const T* input_data = input.data<T>();\n    const int* indices_data = indices.data<int>();\n    T* output_data = output->template mutable_data<T>(lite::TargetType::kX86);\n    for (int b = 0; b < batch_size; ++b) {\n      for (int c = 0; c < output_channels; ++c) {\n        for (int i = 0; i < input_feasize; ++i) {\n          int index = indices_data[i];\n          CHECK(index < output_feasize) << "err index in unpooling!";\n          output_data[index] = input_data[i];\n        }\n        input_data += input_feasize;\n        indices_data += input_feasize;\n        output_data += output_feasize;\n      }\n    }\n  }\n};\ntemplate <class T>\nclass Unpool2dMaxGradFunctor<lite::TargetType::kX86, T> {\n public:\n  void operator()(const lite::X86Context& context,\n                  const lite::Tensor& input,\n                  const lite::Tensor& indices,\n                  const lite::Tensor& output,\n                  const lite::Tensor& output_grad,\n                  lite::Tensor* input_grad) {\n    const int batch_size = input.dims()[0];\n    const int input_height = input.dims()[2];\n    const int input_width = input.dims()[3];\n    const int output_channels = output.dims()[1];\n    const int output_height = output.dims()[2];\n    const int output_width = output.dims()[3];\n    int input_feasize = input_height * input_width;\n    int output_feasize = output_height * output_width;\n    const int* indices_data = indices.data<int>();\n    const T* output_grad_data = output_grad.data<T>();\n    T* input_grad_data =\n        input_grad->template mutable_data<T>(lite::TargetType::kX86);\n\n    for (int b = 0; b < batch_size; ++b) {\n      for (int c = 0; c < output_channels; ++c) {\n        for (int i = 0; i < input_feasize; ++i) {\n          int index = indices_data[i];\n          CHECK(index < output_feasize) << "err index in unpooling!";\n          input_grad_data[i] = output_grad_data[index];\n        }\n        input_grad_data += input_feasize;\n        indices_data += input_feasize;\n        output_grad_data += output_feasize;\n      }\n    }\n  }\n};\ntemplate class Unpool2dMaxGradFunctor<lite::TargetType::kX86, float>;\ntemplate class Unpool2dMaxGradFunctor<lite::TargetType::kX86, double>;\ntemplate class Unpool2dMaxFunctor<lite::TargetType::kX86, float>;\ntemplate class Unpool2dMaxFunctor<lite::TargetType::kX86, double>;\n}  // namespace math\n}  // namespace x86\n}  // namespace lite\n}  // namespace paddle\n
+#if defined(__clang__)
+#pragma clang attribute pop
+#elif defined(__GNUC__)
+#pragma GCC pop_options
+#endif

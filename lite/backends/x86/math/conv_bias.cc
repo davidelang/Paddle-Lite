@@ -1,96 +1,13 @@
-/* Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License. */
-
-#include "lite/backends/x86/math/conv_bias.h"
-#include <algorithm>
-
-#if defined(__clang__) || defined(__GNUC__)
+/* Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.\n\nLicensed under the Apache License, Version 2.0 (the "License");\nyou may not use this file except in compliance with the License.\nYou may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\nUnless required by applicable law or agreed to in writing, software\ndistributed under the License is distributed on an "AS IS" BASIS,\nWITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\nSee the License for the specific language governing permissions and\nlimitations under the License. */\n\n#include "lite/backends/x86/math/conv_bias.h"\n#include <algorithm>\n
+#if defined(__clang__)
+#pragma clang attribute push (__attribute__((target("avx,avx2,fma,f16c"))), apply_to=any(function))
+#elif defined(__GNUC__)
+#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
-
-namespace paddle {
-namespace lite {
-namespace x86 {
-namespace math {
-
-__attribute__((target("avx,avx2,fma,f16c")))
-void bias_add_broadcast(const float* dinx,
-                        const float* diny,
-                        float* dout,
-                        int batch,
-                        int channels,
-                        int num) {
-  for (int i = 0; i < batch; ++i) {
-    for (int j = 0; j < channels; ++j) {
-      int offset = (i * channels + j) * num;
-      const float* din_ptr = dinx + offset;
-      const float diny_data = diny[j];
-      float* dout_ptr = dout + offset;
-      for (int k = 0; k < num; ++k) {
-        *dout_ptr = *din_ptr + diny_data;
-        dout_ptr++;
-        din_ptr++;
-      }
-    }
-  }
-}
-
-__attribute__((target("avx,avx2,fma,f16c")))
-void bias_add_relu_broadcast(const float* dinx,
-                             const float* diny,
-                             float* dout,
-                             int batch,
-                             int channels,
-                             int num) {
-  for (int i = 0; i < batch; ++i) {
-    for (int j = 0; j < channels; ++j) {
-      int offset = (i * channels + j) * num;
-      const float* din_ptr = dinx + offset;
-      const float diny_data = diny[j];
-      float* dout_ptr = dout + offset;
-      for (int k = 0; k < num; ++k) {
-        *dout_ptr = (std::max)(0.f, *din_ptr + diny_data);
-        dout_ptr++;
-        din_ptr++;
-      }
-    }
-  }
-}
-
-__attribute__((target("avx,avx2,fma,f16c")))
-void bias_add_relu6_broadcast(const float* dinx,
-                              const float* diny,
-                              float* dout,
-                              int batch,
-                              int channels,
-                              int num) {
-  for (int i = 0; i < batch; ++i) {
-    for (int j = 0; j < channels; ++j) {
-      int offset = (i * channels + j) * num;
-      const float* din_ptr = dinx + offset;
-      const float diny_data = diny[j];
-      float* dout_ptr = dout + offset;
-      for (int k = 0; k < num; ++k) {
-        *dout_ptr = (std::min)(6.f, (std::max)(0.f, *din_ptr + diny_data));
-        dout_ptr++;
-        din_ptr++;
-      }
-    }
-  }
-}
-
-}  // namespace math
-}  // namespace x86
-}  // namespace lite
-}  // namespace paddle
+\n\nnamespace paddle {\nnamespace lite {\nnamespace x86 {\nnamespace math {\n\nvoid bias_add_broadcast(const float* dinx,\n                        const float* diny,\n                        float* dout,\n                        int batch,\n                        int channels,\n                        int num) {\n  for (int i = 0; i < batch; ++i) {\n    for (int j = 0; j < channels; ++j) {\n      int offset = (i * channels + j) * num;\n      const float* din_ptr = dinx + offset;\n      const float diny_data = diny[j];\n      float* dout_ptr = dout + offset;\n      for (int k = 0; k < num; ++k) {\n        *dout_ptr = *din_ptr + diny_data;\n        dout_ptr++;\n        din_ptr++;\n      }\n    }\n  }\n}\n\nvoid bias_add_relu_broadcast(const float* dinx,\n                             const float* diny,\n                             float* dout,\n                             int batch,\n                             int channels,\n                             int num) {\n  for (int i = 0; i < batch; ++i) {\n    for (int j = 0; j < channels; ++j) {\n      int offset = (i * channels + j) * num;\n      const float* din_ptr = dinx + offset;\n      const float diny_data = diny[j];\n      float* dout_ptr = dout + offset;\n      for (int k = 0; k < num; ++k) {\n        *dout_ptr = (std::max)(0.f, *din_ptr + diny_data);\n        dout_ptr++;\n        din_ptr++;\n      }\n    }\n  }\n}\n\nvoid bias_add_relu6_broadcast(const float* dinx,\n                              const float* diny,\n                              float* dout,\n                              int batch,\n                              int channels,\n                              int num) {\n  for (int i = 0; i < batch; ++i) {\n    for (int j = 0; j < channels; ++j) {\n      int offset = (i * channels + j) * num;\n      const float* din_ptr = dinx + offset;\n      const float diny_data = diny[j];\n      float* dout_ptr = dout + offset;\n      for (int k = 0; k < num; ++k) {\n        *dout_ptr = (std::min)(6.f, (std::max)(0.f, *din_ptr + diny_data));\n        dout_ptr++;\n        din_ptr++;\n      }\n    }\n  }\n}\n\n}  // namespace math\n}  // namespace x86\n}  // namespace lite\n}  // namespace paddle\n
+#if defined(__clang__)
+#pragma clang attribute pop
+#elif defined(__GNUC__)
+#pragma GCC pop_options
+#endif
