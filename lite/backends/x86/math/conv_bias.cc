@@ -16,7 +16,6 @@ limitations under the License. */
 #include <algorithm>
 
 #if defined(__clang__) || defined(__GNUC__)
-#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
@@ -95,7 +94,3 @@ void bias_add_relu6_broadcast(const float* dinx,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC pop_options
-#endif

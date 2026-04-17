@@ -18,7 +18,6 @@ limitations under the License. */
 #include "lite/utils/log/cp_logging.h"
 
 #if defined(__clang__) || defined(__GNUC__)
-#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
@@ -32,7 +31,6 @@ namespace math {
  * col =
  *   [input_channels, filter_height, filter_width, output_height, output_width]
  */
-__attribute__((target("avx,avx2,fma,f16c")))
 template <class T>
 class Im2ColFunctor<lite::x86::math::ColFormat::kCFO,
                     lite::TargetType::kX86,
@@ -67,7 +65,6 @@ class Im2ColFunctor<lite::x86::math::ColFormat::kCFO,
  * col =
  *   [input_channels, filter_height, filter_width, output_height, output_width]
  */
-__attribute__((target("avx,avx2,fma,f16c")))
 template <class T>
 class Col2ImFunctor<lite::x86::math::ColFormat::kCFO,
                     lite::TargetType::kX86,
@@ -128,19 +125,15 @@ class Col2ImFunctor<lite::x86::math::ColFormat::kCFO,
   }
 };
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template class Im2ColFunctor<lite::x86::math::ColFormat::kCFO,
                              lite::TargetType::kX86,
                              float>;
-__attribute__((target("avx,avx2,fma,f16c")))
 template class Im2ColFunctor<lite::x86::math::ColFormat::kCFO,
                              lite::TargetType::kX86,
                              double>;
-__attribute__((target("avx,avx2,fma,f16c")))
 template class Col2ImFunctor<lite::x86::math::ColFormat::kCFO,
                              lite::TargetType::kX86,
                              float>;
-__attribute__((target("avx,avx2,fma,f16c")))
 template class Col2ImFunctor<lite::x86::math::ColFormat::kCFO,
                              lite::TargetType::kX86,
                              double>;
@@ -150,7 +143,6 @@ template class Col2ImFunctor<lite::x86::math::ColFormat::kCFO,
  * col =
  *   [output_height, output_width, input_channels, filter_height, filter_width]
  */
-__attribute__((target("avx,avx2,fma,f16c")))
 template <class T>
 class Im2ColFunctor<lite::x86::math::ColFormat::kOCF,
                     lite::TargetType::kX86,
@@ -215,7 +207,6 @@ class Im2ColFunctor<lite::x86::math::ColFormat::kOCF,
  * col =
  *   [output_height, output_width, input_channels, filter_height, filter_width]
  */
-__attribute__((target("avx,avx2,fma,f16c")))
 template <class T>
 class Col2ImFunctor<lite::x86::math::ColFormat::kOCF,
                     lite::TargetType::kX86,
@@ -286,19 +277,15 @@ class Col2ImFunctor<lite::x86::math::ColFormat::kOCF,
   }
 };
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template class Im2ColFunctor<lite::x86::math::ColFormat::kOCF,
                              lite::TargetType::kX86,
                              float>;
-__attribute__((target("avx,avx2,fma,f16c")))
 template class Im2ColFunctor<lite::x86::math::ColFormat::kOCF,
                              lite::TargetType::kX86,
                              double>;
-__attribute__((target("avx,avx2,fma,f16c")))
 template class Col2ImFunctor<lite::x86::math::ColFormat::kOCF,
                              lite::TargetType::kX86,
                              float>;
-__attribute__((target("avx,avx2,fma,f16c")))
 template class Col2ImFunctor<lite::x86::math::ColFormat::kOCF,
                              lite::TargetType::kX86,
                              double>;
@@ -307,10 +294,6 @@ template class Col2ImFunctor<lite::x86::math::ColFormat::kOCF,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC pop_options
-#endif
 
 namespace paddle { namespace lite { namespace x86 { namespace math {
 template class Im2ColFunctor<lite::x86::math::ColFormat::kCFO, lite::TargetType::kX86, signed char>;

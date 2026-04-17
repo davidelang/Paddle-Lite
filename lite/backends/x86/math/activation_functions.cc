@@ -18,7 +18,6 @@ limitations under the License. */
 #include "lite/backends/x86/math/avx/avx_mathfuns.h"
 
 #if defined(__clang__) || defined(__GNUC__)
-#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
@@ -91,8 +90,4 @@ __m256 Identity(const __m256 a, const __m256 b) { return a; }
 }  // namespace lite
 }  // namespace paddle
 
-#endif
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC pop_options
 #endif

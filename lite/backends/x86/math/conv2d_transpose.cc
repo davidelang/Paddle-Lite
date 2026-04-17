@@ -23,7 +23,6 @@ limitations under the License. */
 #include <xmmintrin.h>
 
 #if defined(__clang__) || defined(__GNUC__)
-#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 #endif
@@ -551,7 +550,3 @@ void conv_transpose_depthwise_s2(const float* dst,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC pop_options
-#endif

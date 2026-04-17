@@ -17,7 +17,6 @@
 #include <utility>
 
 #if defined(__clang__) || defined(__GNUC__)
-#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
@@ -60,7 +59,3 @@ MatDescriptor CreateMatrixDescriptor(const lite::DDimLite &tensor_dim,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC pop_options
-#endif

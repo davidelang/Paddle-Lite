@@ -25,7 +25,6 @@ limitations under the License. */
 #include "lite/backends/x86/math/conv_direct_fp32.h"
 
 #if defined(__clang__) || defined(__GNUC__)
-#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
@@ -47,7 +46,6 @@ struct jit_param {
 
 conv_direct::conv_direct() : JitCode(8192, Xbyak::AutoGrow) {}
 
-__attribute__((target("avx,avx2,fma,f16c")))
 void conv_direct::generate_code(int ic,
                                 int ih,
                                 int iw,
@@ -307,7 +305,6 @@ void conv_direct::generate_code(int ic,
   postCode();
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 void conv_direct::run(const float* i_data,
                       const float* trans_weight,
                       float* trans_out,
@@ -820,7 +817,3 @@ void conv_direct_transpose_out(int bs,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC pop_options
-#endif

@@ -21,7 +21,6 @@ limitations under the License. */
 #include <tmmintrin.h>
 
 #if defined(__clang__) || defined(__GNUC__)
-#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
@@ -1190,7 +1189,3 @@ void gemm_s8u8s8_runpackB(
 }  // namespace paddle
 
 #endif  // __AVX2__
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC pop_options
-#endif

@@ -16,7 +16,6 @@ limitations under the License. */
 #include "lite/backends/x86/math/conv_depthwise_int8.h"
 
 #if defined(__clang__) || defined(__GNUC__)
-#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
@@ -25,7 +24,6 @@ namespace lite {
 namespace x86 {
 namespace math {
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename Dtype>
 __attribute__((target("avx,avx2,fma,f16c")))
 void conv_3x3s2p0_dw_int8(Dtype* dout,
@@ -45,7 +43,6 @@ void conv_3x3s2p0_dw_int8(Dtype* dout,
                           const float* scale,
                           X86Context* ctx) {}
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename Dtype>
 __attribute__((target("avx,avx2,fma,f16c")))
 void conv_3x3s2p1_dw_int8(Dtype* dout,
@@ -65,7 +62,6 @@ void conv_3x3s2p1_dw_int8(Dtype* dout,
                           const float* scale,
                           X86Context* ctx) {}
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template void conv_3x3s2p0_dw_int8(float* dout,
                                    const int8_t* din,
                                    const int8_t* weights,
@@ -83,7 +79,6 @@ template void conv_3x3s2p0_dw_int8(float* dout,
                                    const float* scale,
                                    X86Context* ctx);
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template void conv_3x3s2p0_dw_int8(int8_t* dout,
                                    const int8_t* din,
                                    const int8_t* weights,
@@ -101,7 +96,6 @@ template void conv_3x3s2p0_dw_int8(int8_t* dout,
                                    const float* scale,
                                    X86Context* ctx);
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template void conv_3x3s2p1_dw_int8(float* dout,
                                    const int8_t* din,
                                    const int8_t* weights,
@@ -119,7 +113,6 @@ template void conv_3x3s2p1_dw_int8(float* dout,
                                    const float* scale,
                                    X86Context* ctx);
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template void conv_3x3s2p1_dw_int8(int8_t* dout,
                                    const int8_t* din,
                                    const int8_t* weights,
@@ -141,7 +134,3 @@ template void conv_3x3s2p1_dw_int8(int8_t* dout,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC pop_options
-#endif

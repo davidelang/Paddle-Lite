@@ -15,7 +15,6 @@ limitations under the License. */
 #include "lite/backends/x86/math/context_project.h"
 
 #if defined(__clang__) || defined(__GNUC__)
-#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
@@ -31,7 +30,3 @@ template class ContextProjectFunctor<lite::TargetType::kX86, double>;
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC pop_options
-#endif

@@ -20,7 +20,6 @@ limitations under the License. */
 #include "lite/backends/x86/math/selected_rows_functor.h"
 
 #if defined(__clang__) || defined(__GNUC__)
-#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
@@ -29,7 +28,6 @@ namespace lite {
 namespace x86 {
 namespace math {
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 struct SelectedRowsAdd<lite::TargetType::kX86, T> {
   void operator()(const lite::X86Context& context,
@@ -70,7 +68,6 @@ struct SelectedRowsAdd<lite::TargetType::kX86, T> {
 template struct SelectedRowsAdd<lite::TargetType::kX86, float>;
 template struct SelectedRowsAdd<lite::TargetType::kX86, double>;
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 struct SelectedRowsAddTensor<lite::TargetType::kX86, T> {
   void operator()(const lite::X86Context& context,
@@ -113,7 +110,6 @@ struct SelectedRowsAddTensor<lite::TargetType::kX86, T> {
 template struct SelectedRowsAddTensor<lite::TargetType::kX86, float>;
 template struct SelectedRowsAddTensor<lite::TargetType::kX86, double>;
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 struct SelectedRowsAddTo<lite::TargetType::kX86, T> {
   void operator()(const lite::X86Context& context,
@@ -145,7 +141,6 @@ template struct SelectedRowsAddTo<lite::TargetType::kX86, double>;
 template struct SelectedRowsAddTo<lite::TargetType::kX86, int>;
 template struct SelectedRowsAddTo<lite::TargetType::kX86, int64_t>;
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 struct SelectedRowsSumTo<lite::TargetType::kX86, T> {
   void operator()(const lite::X86Context& context,
@@ -185,7 +180,6 @@ struct SelectedRowsSumTo<lite::TargetType::kX86, T> {
 template struct SelectedRowsSumTo<lite::TargetType::kX86, float>;
 template struct SelectedRowsSumTo<lite::TargetType::kX86, double>;
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 struct SelectedRowsAddToTensor<lite::TargetType::kX86, T> {
   void operator()(const lite::X86Context& context,
@@ -228,7 +222,6 @@ template struct SelectedRowsAddToTensor<lite::TargetType::kX86, int64_t>;
 // add or mul.
 namespace scatter {
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename DeviceContext, typename T>
 typename std::enable_if<
     std::is_floating_point<T>::value &&
@@ -241,7 +234,6 @@ elementwise_add_to(const DeviceContext& ctx,
   blas->AXPY(data_len, 1., in, out);
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename DeviceContext, typename T>
 typename std::enable_if<
     !std::is_floating_point<T>::value &&
@@ -256,7 +248,6 @@ elementwise_add_to(const DeviceContext& ctx,
   }
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 struct MergeAdd<lite::TargetType::kX86, T> {
   fluid::SelectedRows operator()(const lite::X86Context& context,
@@ -380,7 +371,6 @@ template struct MergeAdd<lite::TargetType::kX86, int64_t>;
 template struct MergeAdd<lite::TargetType::kX86, float>;
 template struct MergeAdd<lite::TargetType::kX86, double>;
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 struct UpdateToTensor<lite::TargetType::kX86, T> {
   void operator()(const lite::X86Context& context,
@@ -448,7 +438,3 @@ struct UpdateToTensor<lite::TargetType::kX86, T> {
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC pop_options
-#endif

@@ -24,7 +24,6 @@ limitations under the License. */
 #include <xmmintrin.h>
 
 #if defined(__clang__) || defined(__GNUC__)
-#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 #endif
@@ -82,7 +81,6 @@ static void activate_relu_inplace(float *data, int len, float alpha, int mode) {
   }
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 static void activate_relu_inplace_bias(float *data,
                                        const float *bias,
                                        int channel,
@@ -194,7 +192,6 @@ static void activate_lrelu_inplace(float *data, int len, float alpha) {
   }
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 static void activate_lrelu_inplace_bias(float *data,
                                         const float *bias,
                                         int channel,
@@ -248,7 +245,6 @@ static void activate_lrelu_inplace_bias(float *data,
   }
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 static void activate_hardswish_inplace_bias(float *data,
                                             const float *bias,
                                             int channel,
@@ -353,7 +349,6 @@ static void activate_hardswish_inplace_bias(float *data,
   }
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 static void activate_hardswish_inplace(
     float *data, int len, float scale, float threshold, float offset) {
 #if 1
@@ -441,7 +436,6 @@ static void activate_hardswish_inplace(
   }
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 static void activate_none_inplace_bias(float *data,
                                        const float *bias,
                                        int channel,
@@ -549,7 +543,3 @@ void fill_bias_act(float *tensor,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC pop_options
-#endif

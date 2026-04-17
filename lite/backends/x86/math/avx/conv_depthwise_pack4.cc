@@ -17,7 +17,6 @@ limitations under the License. */
 #include "lite/backends/x86/math/avx/conv_utils.h"
 
 #if defined(__clang__) || defined(__GNUC__)
-#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
@@ -120,7 +119,3 @@ void conv_depthwise_m128(lite::Tensor* input,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC pop_options
-#endif

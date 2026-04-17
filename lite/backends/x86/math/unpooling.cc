@@ -16,7 +16,6 @@ limitations under the License. */
 #include "lite/utils/log/cp_logging.h"
 
 #if defined(__clang__) || defined(__GNUC__)
-#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
@@ -24,7 +23,6 @@ namespace paddle {
 namespace lite {
 namespace x86 {
 namespace math {
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename T>
 class Unpool2dMaxFunctor<lite::TargetType::kX86, T> {
  public:
@@ -57,7 +55,6 @@ class Unpool2dMaxFunctor<lite::TargetType::kX86, T> {
     }
   }
 };
-__attribute__((target("avx,avx2,fma,f16c")))
 template <class T>
 class Unpool2dMaxGradFunctor<lite::TargetType::kX86, T> {
  public:
@@ -102,7 +99,3 @@ template class Unpool2dMaxFunctor<lite::TargetType::kX86, double>;
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC pop_options
-#endif

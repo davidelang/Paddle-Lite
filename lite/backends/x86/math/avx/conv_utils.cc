@@ -16,7 +16,6 @@ limitations under the License. */
 #include <algorithm>
 
 #if defined(__clang__) || defined(__GNUC__)
-#pragma GCC push_options
 #pragma GCC target("avx,avx2,fma,f16c")
 #endif
 
@@ -91,7 +90,6 @@ void conv_trans_weights_numc_c3(const float* din,
 }
 
 // function: input-4x8, output-8x4
-__attribute__((target("avx,avx2,fma,f16c")))
 static inline void transpose4x8_ps(__m256& row0,  // NOLINT
                                    __m256& row1,  // NOLINT
                                    __m256& row2,  // NOLINT
@@ -1089,7 +1087,6 @@ inline bool is_a_ge_zero_and_a_lt_b(int a, int b) {
  * @param stride
  * @param data_col
  */
-__attribute__((target("avx,avx2,fma,f16c")))
 template <typename Dtype>
 __attribute__((target("avx,avx2,fma,f16c")))
 void im2col_common(const Dtype* data_im,
@@ -1143,9 +1140,7 @@ void im2col_common(const Dtype* data_im,
   }
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <>
-__attribute__((target("avx,avx2,fma,f16c")))
 void im2col_s1<float>(const float* data_im,
                       int channels,
                       int height,
@@ -1216,9 +1211,7 @@ void im2col_s1<float>(const float* data_im,
   }
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <>
-__attribute__((target("avx,avx2,fma,f16c")))
 void im2col_s2<float>(const float* data_im,
                       int channels,
                       int height,
@@ -1301,9 +1294,7 @@ void im2col_s2<float>(const float* data_im,
  * @param stride
  * @param data_col
  */
-__attribute__((target("avx,avx2,fma,f16c")))
 template <>
-__attribute__((target("avx,avx2,fma,f16c")))
 void im2col<float>(const float* data_im,
                    int channels,
                    int height,
@@ -1371,9 +1362,7 @@ void im2col<float>(const float* data_im,
   }
 }
 
-__attribute__((target("avx,avx2,fma,f16c")))
 template <>
-__attribute__((target("avx,avx2,fma,f16c")))
 void im2col<int8_t>(const int8_t* data_im,
                     int channels,
                     int height,
@@ -1429,7 +1418,3 @@ void im2col<int8_t>(const int8_t* data_im,
 }  // namespace x86
 }  // namespace lite
 }  // namespace paddle
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC pop_options
-#endif
