@@ -149,7 +149,17 @@ else()
 
     # Compiling steps in tiny_publish format:
     # 1. compile all source files into .object `PADDLELITE_OBJS`
-    add_library(PADDLELITE_OBJS OBJECT ${__lite_cc_files})
+    
+if(LITE_WITH_X86)
+    # The ultimate fix for Paddle's CMake directory scoping bug.
+    # Re-apply AVX2 flags to math kernels in the api directory scope so PADDLELITE_OBJS inherits them.
+    file(GLOB X86_FIX_MATH_SRC "${PADDLE_SOURCE_DIR}/lite/backends/x86/math/*.cc")
+    file(GLOB X86_FIX_AVX_SRC "${PADDLE_SOURCE_DIR}/lite/backends/x86/math/avx/*.cc")
+    set_source_files_properties(${X86_FIX_MATH_SRC} ${X86_FIX_AVX_SRC} PROPERTIES COMPILE_FLAGS "-mavx -mavx2 -mfma -mf16c")
+endif()
+
+add_library(PADDLELITE_OBJS OBJECT ${__lite_cc_files})
+
     add_dependencies(PADDLELITE_OBJS fbs_headers)
     if(LITE_WITH_X86)
         include_directories(${XBYAK_INC_DIR})

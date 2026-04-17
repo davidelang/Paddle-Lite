@@ -1,13 +1,205 @@
-// Copyright (c) 2018 PaddlePaddle Authors. All Rights Reserved.\n//\n// Licensed under the Apache License, Version 2.0 (the "License");\n// you may not use this file except in compliance with the License.\n// You may obtain a copy of the License at\n//\n//     http://www.apache.org/licenses/LICENSE-2.0\n//\n// Unless required by applicable law or agreed to in writing, software\n// distributed under the License is distributed on an "AS IS" BASIS,\n// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n// See the License for the specific language governing permissions and\n// limitations under the License.\n\n#include "lite/backends/x86/math/tree2col.h"\n#include <deque>\n#include <stack>\n
-#if defined(__clang__)
-#pragma clang attribute push (__attribute__((target("avx,avx2,fma,f16c"))), apply_to=any(function))
-#elif defined(__GNUC__)
-#pragma GCC push_options
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-\n\nnamespace paddle {\nnamespace lite {\nnamespace x86 {\nnamespace math {\nstd::vector<TreeNode> Tree2ColUtil::construct_patch(\n    size_t root, int max_depth, const std::vector<std::vector<int>> &tr) {\n  std::stack<TreeNode, std::deque<TreeNode>> stack;\n  std::map<int, bool> visited;\n  std::vector<TreeNode> patch;\n\n  stack.push(TreeNode(root, 1, 1, 0));\n  patch.emplace_back(TreeNode(root, 1, 1, 0));\n  visited[root] = true;\n\n  while (!stack.empty()) {\n    TreeNode &u = stack.top();\n    bool end = true;\n    size_t node = u.get_node(), sz = tr[node].size();\n    visited[node] = true;\n    for (size_t i = 0; i < sz; i++) {\n      size_t v = tr[node][i];\n      if (!visited[v] && static_cast<int>(u.get_depth()) + 1 < max_depth) {\n        visited[v] = true;\n        stack.push(TreeNode(v, i, sz, u.get_depth() + 1));\n        patch.push_back(TreeNode(v, i + 1, sz, u.get_depth() + 1));\n        end = false;\n      }\n    }\n    if (end) {\n      stack.pop();\n    }\n  }\n  return patch;\n}\n\nvoid Tree2ColUtil::construct_tree(const lite::Tensor &EdgeSet,\n                                  std::vector<std::vector<int>> *tr,\n                                  size_t *node_count) {\n  auto edge_set_dims = EdgeSet.dims();\n  CHECK_EQ(edge_set_dims[1], 2);\n  int64_t edge_count = EdgeSet.numel();\n\n  const int *edge_data = EdgeSet.data<int>();\n\n  for (int64_t i = 0; i < edge_count; i += 2) {\n    int u = edge_data[i], v = edge_data[i + 1];\n    if (u != 0 && v != 0) (*node_count)++;\n  }\n  (*node_count)++;\n\n  tr->resize(static_cast<size_t>(*node_count + 1));\n\n  for (int64_t i = 0; i < edge_count; i += 2) {\n    int u = edge_data[i], v = edge_data[i + 1];\n    if (u != 0 && v != 0) {\n      tr->at(u).push_back(v);\n    } else {\n      break;\n    }\n  }\n}\n\ntemplate <typename T>\nclass Tree2ColFunctor<lite::TargetType::kX86, T> {\n public:\n  void operator()(const lite::X86Context &context,\n                  const lite::Tensor &EdgeSet,\n                  const lite::Tensor &node_features,\n                  lite::Tensor *patch,\n                  int max_depth) {\n    std::vector<std::vector<int>> tr;\n    auto feature_dims = node_features.dims();\n    math::SetConstant<lite::TargetType::kX86, T> constant;\n    int64_t feature_size = feature_dims[1];\n    size_t patch_elem_size = 3 * static_cast<size_t>(feature_size);\n    size_t node_count = 0, patch_count = 0, patch_size;\n    Tree2ColUtil::construct_tree(EdgeSet, &tr, &node_count);\n    std::vector<std::vector<TreeNode>> processing_list;\n    for (size_t u = 1; u <= node_count; u++) {\n      std::vector<TreeNode> temp_patch =\n          Tree2ColUtil::construct_patch(u, max_depth, tr);\n      if (!temp_patch.empty()) {\n        processing_list.emplace_back(temp_patch);\n      }\n    }\n    patch_size = processing_list.size();\n\n    // T *patch_data =\n    //    patch->template mutable_data<T>({static_cast<int64_t>(patch_size),\n    //                            static_cast<int64_t>(patch_elem_size)},\n    //                           cpu_place);\n    patch->Resize({static_cast<int64_t>(patch_size),\n                   static_cast<int64_t>(patch_elem_size)});\n    auto *patch_data = patch->template mutable_data<T>(lite::TargetType::kX86);\n    constant(context, patch, 0);\n    const T *features = node_features.data<T>();\n\n    for (auto &patch_item : processing_list) {\n      size_t pointer_base = patch_count * patch_elem_size;\n      for (auto &v : patch_item) {\n        T eta_l = v.eta_l<T>(max_depth), eta_r = v.eta_r<T>(max_depth),\n          eta_t = v.eta_t<T>(max_depth);\n        size_t id = v.get_node() - 1;\n        for (int i = 0; i < feature_size; i++) {\n          patch_data[pointer_base + i * 3] +=\n              eta_l * features[id * feature_size + i];\n          patch_data[pointer_base + i * 3 + 1] +=\n              eta_r * features[id * feature_size + i];\n          patch_data[pointer_base + i * 3 + 2] +=\n              eta_t * features[id * feature_size + i];\n        }\n      }\n      patch_count++;\n    }\n    patch->Resize({static_cast<int64_t>(patch_count),\n                   static_cast<int64_t>(patch_elem_size)});\n  }\n};\ntemplate <typename T>\nclass Col2TreeFunctor<lite::TargetType::kX86, T> {\n public:\n  void operator()(const lite::X86Context &context,\n                  const lite::Tensor &EdgeSet,\n                  const lite::Tensor &out_grad,\n                  lite::Tensor *in_grad,\n                  int max_depth) {\n    std::vector<std::vector<int>> tr;\n    auto output_dims = out_grad.dims();\n    // auto cpu_place = boost::get<platform::CPUPlace>(context.GetPlace());\n    math::SetConstant<lite::TargetType::kX86, T> constant;\n    int64_t output_size = output_dims[1];\n    size_t grad_elem_size = 3 * static_cast<size_t>(output_size);\n    size_t node_count = 0, grad_count = 0;\n    Tree2ColUtil::construct_tree(EdgeSet, &tr, &node_count);\n    std::vector<std::vector<TreeNode>> processing_list;\n    std::vector<std::vector<TreeNode>> grad_list;\n    grad_list.resize(node_count);\n    for (size_t u = 1; u <= node_count; u++) {\n      std::vector<TreeNode> tmp =\n          Tree2ColUtil::construct_patch(u, max_depth, tr);\n      if (!tmp.empty()) {\n        processing_list.push_back(tmp);\n      }\n    }\n    for (size_t patch_id = 0; patch_id < processing_list.size(); patch_id++) {\n      for (auto v : processing_list[patch_id]) {\n        grad_list[v.get_node() - 1].push_back(v.change_node(patch_id + 1));\n      }\n    }\n    // T *grad_data =\n    //    in_grad->template mutable_data<T>({static_cast<int64_t>(node_count),\n    //                              static_cast<int64_t>(grad_elem_size)},\n    //                             cpu_place);\n    in_grad->Resize({static_cast<int64_t>(node_count),\n                     static_cast<int64_t>(grad_elem_size)});\n    auto *grad_data = in_grad->template mutable_data<T>(lite::TargetType::kX86);\n\n    constant(context, in_grad, 0);\n    const T *out_g = out_grad.data<T>();\n    for (auto &patch_item : grad_list) {\n      size_t pointer_base = grad_count * grad_elem_size;\n      for (auto &v : patch_item) {\n        T eta_l = v.eta_l<T>(max_depth), eta_r = v.eta_r<T>(max_depth),\n          eta_t = v.eta_t<T>(max_depth);\n        size_t id = v.get_node() - 1;\n        for (int i = 0; i < output_size; i++) {\n          grad_data[pointer_base + i * 3] +=\n              eta_l * out_g[id * output_size + i];\n          grad_data[pointer_base + i * 3 + 1] +=\n              eta_r * out_g[id * output_size + i];\n          grad_data[pointer_base + i * 3 + 2] +=\n              eta_t * out_g[id * output_size + i];\n        }\n      }\n      grad_count++;\n    }\n  }\n};\n\ntemplate class Tree2ColFunctor<lite::TargetType::kX86, float>;\ntemplate class Tree2ColFunctor<lite::TargetType::kX86, double>;\ntemplate class Col2TreeFunctor<lite::TargetType::kX86, float>;\ntemplate class Col2TreeFunctor<lite::TargetType::kX86, double>;\n}  // namespace math\n}  // namespace x86\n}  // namespace lite\n}  // namespace paddle\n
-#if defined(__clang__)
-#pragma clang attribute pop
-#elif defined(__GNUC__)
-#pragma GCC pop_options
-#endif
+// Copyright (c) 2018 PaddlePaddle Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "lite/backends/x86/math/tree2col.h"
+#include <deque>
+#include <stack>
+
+namespace paddle {
+namespace lite {
+namespace x86 {
+namespace math {
+std::vector<TreeNode> Tree2ColUtil::construct_patch(
+    size_t root, int max_depth, const std::vector<std::vector<int>> &tr) {
+  std::stack<TreeNode, std::deque<TreeNode>> stack;
+  std::map<int, bool> visited;
+  std::vector<TreeNode> patch;
+
+  stack.push(TreeNode(root, 1, 1, 0));
+  patch.emplace_back(TreeNode(root, 1, 1, 0));
+  visited[root] = true;
+
+  while (!stack.empty()) {
+    TreeNode &u = stack.top();
+    bool end = true;
+    size_t node = u.get_node(), sz = tr[node].size();
+    visited[node] = true;
+    for (size_t i = 0; i < sz; i++) {
+      size_t v = tr[node][i];
+      if (!visited[v] && static_cast<int>(u.get_depth()) + 1 < max_depth) {
+        visited[v] = true;
+        stack.push(TreeNode(v, i, sz, u.get_depth() + 1));
+        patch.push_back(TreeNode(v, i + 1, sz, u.get_depth() + 1));
+        end = false;
+      }
+    }
+    if (end) {
+      stack.pop();
+    }
+  }
+  return patch;
+}
+
+void Tree2ColUtil::construct_tree(const lite::Tensor &EdgeSet,
+                                  std::vector<std::vector<int>> *tr,
+                                  size_t *node_count) {
+  auto edge_set_dims = EdgeSet.dims();
+  CHECK_EQ(edge_set_dims[1], 2);
+  int64_t edge_count = EdgeSet.numel();
+
+  const int *edge_data = EdgeSet.data<int>();
+
+  for (int64_t i = 0; i < edge_count; i += 2) {
+    int u = edge_data[i], v = edge_data[i + 1];
+    if (u != 0 && v != 0) (*node_count)++;
+  }
+  (*node_count)++;
+
+  tr->resize(static_cast<size_t>(*node_count + 1));
+
+  for (int64_t i = 0; i < edge_count; i += 2) {
+    int u = edge_data[i], v = edge_data[i + 1];
+    if (u != 0 && v != 0) {
+      tr->at(u).push_back(v);
+    } else {
+      break;
+    }
+  }
+}
+
+template <typename T>
+class Tree2ColFunctor<lite::TargetType::kX86, T> {
+ public:
+  void operator()(const lite::X86Context &context,
+                  const lite::Tensor &EdgeSet,
+                  const lite::Tensor &node_features,
+                  lite::Tensor *patch,
+                  int max_depth) {
+    std::vector<std::vector<int>> tr;
+    auto feature_dims = node_features.dims();
+    math::SetConstant<lite::TargetType::kX86, T> constant;
+    int64_t feature_size = feature_dims[1];
+    size_t patch_elem_size = 3 * static_cast<size_t>(feature_size);
+    size_t node_count = 0, patch_count = 0, patch_size;
+    Tree2ColUtil::construct_tree(EdgeSet, &tr, &node_count);
+    std::vector<std::vector<TreeNode>> processing_list;
+    for (size_t u = 1; u <= node_count; u++) {
+      std::vector<TreeNode> temp_patch =
+          Tree2ColUtil::construct_patch(u, max_depth, tr);
+      if (!temp_patch.empty()) {
+        processing_list.emplace_back(temp_patch);
+      }
+    }
+    patch_size = processing_list.size();
+
+    // T *patch_data =
+    //    patch->template mutable_data<T>({static_cast<int64_t>(patch_size),
+    //                            static_cast<int64_t>(patch_elem_size)},
+    //                           cpu_place);
+    patch->Resize({static_cast<int64_t>(patch_size),
+                   static_cast<int64_t>(patch_elem_size)});
+    auto *patch_data = patch->template mutable_data<T>(lite::TargetType::kX86);
+    constant(context, patch, 0);
+    const T *features = node_features.data<T>();
+
+    for (auto &patch_item : processing_list) {
+      size_t pointer_base = patch_count * patch_elem_size;
+      for (auto &v : patch_item) {
+        T eta_l = v.eta_l<T>(max_depth), eta_r = v.eta_r<T>(max_depth),
+          eta_t = v.eta_t<T>(max_depth);
+        size_t id = v.get_node() - 1;
+        for (int i = 0; i < feature_size; i++) {
+          patch_data[pointer_base + i * 3] +=
+              eta_l * features[id * feature_size + i];
+          patch_data[pointer_base + i * 3 + 1] +=
+              eta_r * features[id * feature_size + i];
+          patch_data[pointer_base + i * 3 + 2] +=
+              eta_t * features[id * feature_size + i];
+        }
+      }
+      patch_count++;
+    }
+    patch->Resize({static_cast<int64_t>(patch_count),
+                   static_cast<int64_t>(patch_elem_size)});
+  }
+};
+template <typename T>
+class Col2TreeFunctor<lite::TargetType::kX86, T> {
+ public:
+  void operator()(const lite::X86Context &context,
+                  const lite::Tensor &EdgeSet,
+                  const lite::Tensor &out_grad,
+                  lite::Tensor *in_grad,
+                  int max_depth) {
+    std::vector<std::vector<int>> tr;
+    auto output_dims = out_grad.dims();
+    // auto cpu_place = boost::get<platform::CPUPlace>(context.GetPlace());
+    math::SetConstant<lite::TargetType::kX86, T> constant;
+    int64_t output_size = output_dims[1];
+    size_t grad_elem_size = 3 * static_cast<size_t>(output_size);
+    size_t node_count = 0, grad_count = 0;
+    Tree2ColUtil::construct_tree(EdgeSet, &tr, &node_count);
+    std::vector<std::vector<TreeNode>> processing_list;
+    std::vector<std::vector<TreeNode>> grad_list;
+    grad_list.resize(node_count);
+    for (size_t u = 1; u <= node_count; u++) {
+      std::vector<TreeNode> tmp =
+          Tree2ColUtil::construct_patch(u, max_depth, tr);
+      if (!tmp.empty()) {
+        processing_list.push_back(tmp);
+      }
+    }
+    for (size_t patch_id = 0; patch_id < processing_list.size(); patch_id++) {
+      for (auto v : processing_list[patch_id]) {
+        grad_list[v.get_node() - 1].push_back(v.change_node(patch_id + 1));
+      }
+    }
+    // T *grad_data =
+    //    in_grad->template mutable_data<T>({static_cast<int64_t>(node_count),
+    //                              static_cast<int64_t>(grad_elem_size)},
+    //                             cpu_place);
+    in_grad->Resize({static_cast<int64_t>(node_count),
+                     static_cast<int64_t>(grad_elem_size)});
+    auto *grad_data = in_grad->template mutable_data<T>(lite::TargetType::kX86);
+
+    constant(context, in_grad, 0);
+    const T *out_g = out_grad.data<T>();
+    for (auto &patch_item : grad_list) {
+      size_t pointer_base = grad_count * grad_elem_size;
+      for (auto &v : patch_item) {
+        T eta_l = v.eta_l<T>(max_depth), eta_r = v.eta_r<T>(max_depth),
+          eta_t = v.eta_t<T>(max_depth);
+        size_t id = v.get_node() - 1;
+        for (int i = 0; i < output_size; i++) {
+          grad_data[pointer_base + i * 3] +=
+              eta_l * out_g[id * output_size + i];
+          grad_data[pointer_base + i * 3 + 1] +=
+              eta_r * out_g[id * output_size + i];
+          grad_data[pointer_base + i * 3 + 2] +=
+              eta_t * out_g[id * output_size + i];
+        }
+      }
+      grad_count++;
+    }
+  }
+};
+
+template class Tree2ColFunctor<lite::TargetType::kX86, float>;
+template class Tree2ColFunctor<lite::TargetType::kX86, double>;
+template class Col2TreeFunctor<lite::TargetType::kX86, float>;
+template class Col2TreeFunctor<lite::TargetType::kX86, double>;
+}  // namespace math
+}  // namespace x86
+}  // namespace lite
+}  // namespace paddle

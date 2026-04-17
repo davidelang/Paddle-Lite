@@ -1,13 +1,131 @@
-/* Copyright (c) 2018 paddlepaddle Authors. All Rights Reserved.\n\nLicensed under the Apache License, Version 2.0 (the "License");\nyou may not use this file except in compliance with the License.\nYou may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\nUnless required by applicable law or agreed to in writing, software\ndistributed under the License is distributed on an "AS IS" BASIS,\nWITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\nSee the License for the specific language governing permissions and\nlimitations under the License. */\n\n#include "lite/backends/x86/math/concat_and_split.h"\n#include <algorithm>\n#include <vector>\n
-#if defined(__clang__)
-#pragma clang attribute push (__attribute__((target("avx,avx2,fma,f16c"))), apply_to=any(function))
-#elif defined(__GNUC__)
-#pragma GCC push_options
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-\n\nnamespace paddle {\nnamespace lite {\nnamespace x86 {\nnamespace math {\n\n/*\n * All tensors' dimension should be the same and the values of\n * each dimension must be the same, except the axis dimension.\n */\ntemplate <typename T>\nclass ConcatFunctor<lite::TargetType::kX86, T> {\n public:\n  void operator()(const lite::X86Context& context,\n                  const std::vector<lite::Tensor>& input,\n                  int axis,\n                  lite::Tensor* output) {\n    // TODO(zcd): Add input data validity checking\n    int num = input.size();\n\n    int rows = 1;\n    auto dim_0 = input[0].dims();\n    for (int i = 0; i < axis; ++i) {\n      rows *= dim_0[i];\n    }\n    int out_rows = rows, out_cols = 0;\n\n    std::vector<int64_t> input_cols(input.size());\n    for (int i = 0; i < num; ++i) {\n      int t_cols = input[i].numel() / rows;\n      out_cols += t_cols;\n      input_cols[i] = t_cols;\n    }\n    // auto cpu_place = boost::get<platform::CPUPlace>(context.GetPlace());\n\n    // computation\n    auto output_data = output->template mutable_data<T>();\n    int col_idx = 0;\n    for (int j = 0; j < num; ++j) {\n      int col_len = input_cols[j];\n      auto* input_data = input[j].data<T>();\n      for (int k = 0; k < out_rows; ++k) {\n        // memory::Copy(cpu_place, output_data + k * out_cols + col_idx,\n        // cpu_place,\n        //             input_data + k * col_len, sizeof(T) * col_len);\n        std::copy_n(input_data + k * col_len,\n                    col_len,\n                    output_data + k * out_cols + col_idx);\n      }\n      col_idx += col_len;\n    }\n  }\n};\n\n/*\n * All tensors' dimension should be the same and the values of\n * each dimension must be the same, except the axis dimension.\n */\ntemplate <typename T>\nclass SplitFunctor<lite::TargetType::kX86, T> {\n public:\n  void operator()(const lite::X86Context& context,\n                  const lite::Tensor& input,\n                  const std::vector<const lite::Tensor*>& ref_inputs,\n                  const int axis,\n                  std::vector<lite::Tensor*>* outputs) {\n    // TODO(zcd): Add input data validity checking\n    size_t num = outputs->size();\n\n    int input_rows = 1;\n    auto dim_0 = ref_inputs[0]->dims();\n    for (int i = 0; i < axis; ++i) {\n      input_rows *= dim_0[i];\n    }\n\n    int input_cols = 0;\n\n    std::vector<int64_t> output_cols(outputs->size());\n    for (size_t i = 0; i < num; ++i) {\n      int t_cols = ref_inputs[i]->numel() / input_rows;\n      input_cols += t_cols;\n      output_cols[i] = t_cols;\n    }\n    // auto cpu_place = boost::get<platform::CPUPlace>(context.GetPlace());\n\n    // computation\n    for (int k = 0; k < input_rows; ++k) {\n      const T* src_ptr = input.data<T>() + k * input_cols;\n      int col_idx = 0;\n      for (size_t j = 0; j < num; ++j) {\n        int col_len = output_cols[j];\n        auto* out_tensor = outputs->at(j);\n        if (out_tensor != nullptr) {\n          T* dst_ptr = out_tensor->template mutable_data<T>() + k * col_len;\n          std::copy_n(src_ptr + col_idx, col_len, dst_ptr);\n          // memory::Copy(cpu_place, dst_ptr, cpu_place, src_ptr + col_idx,\n          //             sizeof(T) * col_len);\n        }\n        col_idx += col_len;\n      }\n    }\n  }\n};\n\n#define DEFINE_FUNCTOR(type)                                  \\n  template class ConcatFunctor<lite::TargetType::kX86, type>; \\n  template class SplitFunctor<lite::TargetType::kX86, type>;\n\nFOR_ALL_TYPES(DEFINE_FUNCTOR);\n\n}  // namespace math\n}  // namespace x86\n}  // namespace lite\n}  // namespace paddle\n
-#if defined(__clang__)
-#pragma clang attribute pop
-#elif defined(__GNUC__)
-#pragma GCC pop_options
-#endif
+/* Copyright (c) 2018 paddlepaddle Authors. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License. */
+
+#include "lite/backends/x86/math/concat_and_split.h"
+#include <algorithm>
+#include <vector>
+
+namespace paddle {
+namespace lite {
+namespace x86 {
+namespace math {
+
+/*
+ * All tensors' dimension should be the same and the values of
+ * each dimension must be the same, except the axis dimension.
+ */
+template <typename T>
+class ConcatFunctor<lite::TargetType::kX86, T> {
+ public:
+  void operator()(const lite::X86Context& context,
+                  const std::vector<lite::Tensor>& input,
+                  int axis,
+                  lite::Tensor* output) {
+    // TODO(zcd): Add input data validity checking
+    int num = input.size();
+
+    int rows = 1;
+    auto dim_0 = input[0].dims();
+    for (int i = 0; i < axis; ++i) {
+      rows *= dim_0[i];
+    }
+    int out_rows = rows, out_cols = 0;
+
+    std::vector<int64_t> input_cols(input.size());
+    for (int i = 0; i < num; ++i) {
+      int t_cols = input[i].numel() / rows;
+      out_cols += t_cols;
+      input_cols[i] = t_cols;
+    }
+    // auto cpu_place = boost::get<platform::CPUPlace>(context.GetPlace());
+
+    // computation
+    auto output_data = output->template mutable_data<T>();
+    int col_idx = 0;
+    for (int j = 0; j < num; ++j) {
+      int col_len = input_cols[j];
+      auto* input_data = input[j].data<T>();
+      for (int k = 0; k < out_rows; ++k) {
+        // memory::Copy(cpu_place, output_data + k * out_cols + col_idx,
+        // cpu_place,
+        //             input_data + k * col_len, sizeof(T) * col_len);
+        std::copy_n(input_data + k * col_len,
+                    col_len,
+                    output_data + k * out_cols + col_idx);
+      }
+      col_idx += col_len;
+    }
+  }
+};
+
+/*
+ * All tensors' dimension should be the same and the values of
+ * each dimension must be the same, except the axis dimension.
+ */
+template <typename T>
+class SplitFunctor<lite::TargetType::kX86, T> {
+ public:
+  void operator()(const lite::X86Context& context,
+                  const lite::Tensor& input,
+                  const std::vector<const lite::Tensor*>& ref_inputs,
+                  const int axis,
+                  std::vector<lite::Tensor*>* outputs) {
+    // TODO(zcd): Add input data validity checking
+    size_t num = outputs->size();
+
+    int input_rows = 1;
+    auto dim_0 = ref_inputs[0]->dims();
+    for (int i = 0; i < axis; ++i) {
+      input_rows *= dim_0[i];
+    }
+
+    int input_cols = 0;
+
+    std::vector<int64_t> output_cols(outputs->size());
+    for (size_t i = 0; i < num; ++i) {
+      int t_cols = ref_inputs[i]->numel() / input_rows;
+      input_cols += t_cols;
+      output_cols[i] = t_cols;
+    }
+    // auto cpu_place = boost::get<platform::CPUPlace>(context.GetPlace());
+
+    // computation
+    for (int k = 0; k < input_rows; ++k) {
+      const T* src_ptr = input.data<T>() + k * input_cols;
+      int col_idx = 0;
+      for (size_t j = 0; j < num; ++j) {
+        int col_len = output_cols[j];
+        auto* out_tensor = outputs->at(j);
+        if (out_tensor != nullptr) {
+          T* dst_ptr = out_tensor->template mutable_data<T>() + k * col_len;
+          std::copy_n(src_ptr + col_idx, col_len, dst_ptr);
+          // memory::Copy(cpu_place, dst_ptr, cpu_place, src_ptr + col_idx,
+          //             sizeof(T) * col_len);
+        }
+        col_idx += col_len;
+      }
+    }
+  }
+};
+
+#define DEFINE_FUNCTOR(type)                                  \
+  template class ConcatFunctor<lite::TargetType::kX86, type>; \
+  template class SplitFunctor<lite::TargetType::kX86, type>;
+
+FOR_ALL_TYPES(DEFINE_FUNCTOR);
+
+}  // namespace math
+}  // namespace x86
+}  // namespace lite
+}  // namespace paddle

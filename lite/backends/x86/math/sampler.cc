@@ -1,13 +1,102 @@
-/* Copyright (c) 2018 PaddlePaddle Authors. All Rights Reserved.\n\nLicensed under the Apache License, Version 2.0 (the "License");\nyou may not use this file except in compliance with the License.\nYou may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\nUnless required by applicable law or agreed to in writing, software\ndistributed under the License is distributed on an "AS IS" BASIS,\nWITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\nSee the License for the specific language governing permissions and\nlimitations under the License. */\n\n#include "lite/backends/x86/math/sampler.h"\n#include <iostream>\n#include <queue>\n#include <utility>\n#include <vector>\n#include "lite/utils/log/cp_logging.h"\n
-#if defined(__clang__)
-#pragma clang attribute push (__attribute__((target("avx,avx2,fma,f16c"))), apply_to=any(function))
-#elif defined(__GNUC__)
-#pragma GCC push_options
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-\n\nnamespace paddle {\nnamespace lite {\nnamespace x86 {\nnamespace math {\n\nSampler::~Sampler() {}\n\nUniformSampler::UniformSampler(int64_t range, unsigned int seed)\n    : Sampler(range, seed), inv_range_(1.0 / (range + 1)) {\n  random_engine_ = std::make_shared<std::mt19937_64>(seed_);\n  dist_ = std::make_shared<std::uniform_int_distribution<>>(0, range);\n}\n\nint64_t UniformSampler::Sample() const { return (*dist_)(*random_engine_); }\n\nfloat UniformSampler::Probability(int64_t value) const { return inv_range_; }\n\nLogUniformSampler::LogUniformSampler(int64_t range, unsigned int seed)\n    : Sampler(range, seed), log_range_(log(range + 1)) {\n  random_engine_ = std::make_shared<std::mt19937_64>(seed_);\n  dist_ = std::make_shared<std::uniform_real_distribution<>>(0, 1);\n}\n\nint64_t LogUniformSampler::Sample() const {\n  // Got Log Uniform distribution from uniform distribution by\n  // inverse_transform_sampling method\n  // More details:\n  // https://wanghaoshuang.github.io/2017/11/Log-uniform-distribution-sampler/\n  const int64_t value =\n      static_cast<int64_t>(exp((*dist_)(*random_engine_) * log_range_)) - 1;\n  // Mathematically, value should be <= range_, but might not be due to some\n  // floating point roundoff, so we mod by range_.\n  return value % range_;\n}\n\nfloat LogUniformSampler::Probability(int64_t value) const {\n  // Given f(x) = 1/[(x+1) * log_range_]\n  // The value's  probability  is integral of f(x) from value to (value + 1)\n  // More details:\n  // https://wanghaoshuang.github.io/2017/11/Log-uniform-distribution-sampler\n  return (log((value + 2.0) / (value + 1.0))) / log_range_;\n}\n\nCustomSampler::CustomSampler(int64_t range,\n                             const float *probabilities,\n                             const int *alias,\n                             const float *alias_probabilities,\n                             unsigned int seed)\n    : Sampler(range, seed) {\n  random_engine_ = std::make_shared<std::mt19937>(seed_);\n  real_dist_ = std::make_shared<std::uniform_real_distribution<>>(0, 1);\n  int_dist_ = std::make_shared<std::uniform_int_distribution<>>(0, range);\n\n  alias_probs_ = alias_probabilities;\n  probs_ = probabilities;\n  alias_ = alias;\n}\n\nint64_t CustomSampler::Sample() const {\n  auto index = (*int_dist_)(*random_engine_);\n  auto p = (*real_dist_)(*random_engine_);\n  if (p > alias_probs_[index]) {\n    int alias = alias_[index];\n\n    if (alias == exceptional_val) {\n      LOG(WARNING) << "WARNING: CustomSampler get alias " << exceptional_val;\n      return index;\n    }\n\n    return alias;\n  } else {\n    return index;\n  }\n}\n\nfloat CustomSampler::Probability(int64_t value) const { return probs_[value]; }\n\n}  // namespace math\n}  // namespace x86\n}  // namespace lite\n}  // namespace paddle\n
-#if defined(__clang__)
-#pragma clang attribute pop
-#elif defined(__GNUC__)
-#pragma GCC pop_options
-#endif
+/* Copyright (c) 2018 PaddlePaddle Authors. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License. */
+
+#include "lite/backends/x86/math/sampler.h"
+#include <iostream>
+#include <queue>
+#include <utility>
+#include <vector>
+#include "lite/utils/log/cp_logging.h"
+
+namespace paddle {
+namespace lite {
+namespace x86 {
+namespace math {
+
+Sampler::~Sampler() {}
+
+UniformSampler::UniformSampler(int64_t range, unsigned int seed)
+    : Sampler(range, seed), inv_range_(1.0 / (range + 1)) {
+  random_engine_ = std::make_shared<std::mt19937_64>(seed_);
+  dist_ = std::make_shared<std::uniform_int_distribution<>>(0, range);
+}
+
+int64_t UniformSampler::Sample() const { return (*dist_)(*random_engine_); }
+
+float UniformSampler::Probability(int64_t value) const { return inv_range_; }
+
+LogUniformSampler::LogUniformSampler(int64_t range, unsigned int seed)
+    : Sampler(range, seed), log_range_(log(range + 1)) {
+  random_engine_ = std::make_shared<std::mt19937_64>(seed_);
+  dist_ = std::make_shared<std::uniform_real_distribution<>>(0, 1);
+}
+
+int64_t LogUniformSampler::Sample() const {
+  // Got Log Uniform distribution from uniform distribution by
+  // inverse_transform_sampling method
+  // More details:
+  // https://wanghaoshuang.github.io/2017/11/Log-uniform-distribution-sampler/
+  const int64_t value =
+      static_cast<int64_t>(exp((*dist_)(*random_engine_) * log_range_)) - 1;
+  // Mathematically, value should be <= range_, but might not be due to some
+  // floating point roundoff, so we mod by range_.
+  return value % range_;
+}
+
+float LogUniformSampler::Probability(int64_t value) const {
+  // Given f(x) = 1/[(x+1) * log_range_]
+  // The value's  probability  is integral of f(x) from value to (value + 1)
+  // More details:
+  // https://wanghaoshuang.github.io/2017/11/Log-uniform-distribution-sampler
+  return (log((value + 2.0) / (value + 1.0))) / log_range_;
+}
+
+CustomSampler::CustomSampler(int64_t range,
+                             const float *probabilities,
+                             const int *alias,
+                             const float *alias_probabilities,
+                             unsigned int seed)
+    : Sampler(range, seed) {
+  random_engine_ = std::make_shared<std::mt19937>(seed_);
+  real_dist_ = std::make_shared<std::uniform_real_distribution<>>(0, 1);
+  int_dist_ = std::make_shared<std::uniform_int_distribution<>>(0, range);
+
+  alias_probs_ = alias_probabilities;
+  probs_ = probabilities;
+  alias_ = alias;
+}
+
+int64_t CustomSampler::Sample() const {
+  auto index = (*int_dist_)(*random_engine_);
+  auto p = (*real_dist_)(*random_engine_);
+  if (p > alias_probs_[index]) {
+    int alias = alias_[index];
+
+    if (alias == exceptional_val) {
+      LOG(WARNING) << "WARNING: CustomSampler get alias " << exceptional_val;
+      return index;
+    }
+
+    return alias;
+  } else {
+    return index;
+  }
+}
+
+float CustomSampler::Probability(int64_t value) const { return probs_[value]; }
+
+}  // namespace math
+}  // namespace x86
+}  // namespace lite
+}  // namespace paddle

@@ -1,13 +1,82 @@
-// Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.\n//\n// Licensed under the Apache License, Version 2.0 (the "License");\n// you may not use this file except in compliance with the License.\n// You may obtain a copy of the License at\n//\n//     http://www.apache.org/licenses/LICENSE-2.0\n//\n// Unless required by applicable law or agreed to in writing, software\n// distributed under the License is distributed on an "AS IS" BASIS,\n// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n// See the License for the specific language governing permissions and\n// limitations under the License.\n\n#include "lite/backends/x86/math/clip.h"\n#include <immintrin.h>\n
-#if defined(__clang__)
-#pragma clang attribute push (__attribute__((target("avx,avx2,fma,f16c"))), apply_to=any(function))
-#elif defined(__GNUC__)
-#pragma GCC push_options
-#pragma GCC target("avx,avx2,fma,f16c")
+// Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "lite/backends/x86/math/clip.h"
+#include <immintrin.h>
+
+namespace paddle {
+namespace lite {
+namespace x86 {
+namespace math {
+template <>
+void clip<float>(
+    const float* din, float* dout, const int num, float max_, float min_) {
+  int cnt = num >> 4;
+  int remain = num % 16;
+  int rem_cnt = remain >> 2;
+  int rem_rem = remain & 3;
+  float* ptr_out = dout;
+  const float* ptr_in = din;
+#ifdef __AVX__
+  __m256 max_256 = _mm256_set1_ps(max_);
+  __m256 min_256 = _mm256_set1_ps(min_);
 #endif
-\n\nnamespace paddle {\nnamespace lite {\nnamespace x86 {\nnamespace math {\ntemplate <>\nvoid clip<float>(\n    const float* din, float* dout, const int num, float max_, float min_) {\n  int cnt = num >> 4;\n  int remain = num % 16;\n  int rem_cnt = remain >> 2;\n  int rem_rem = remain & 3;\n  float* ptr_out = dout;\n  const float* ptr_in = din;\n#if 1\n  __m256 max_256 = _mm256_set1_ps(max_);\n  __m256 min_256 = _mm256_set1_ps(min_);\n#endif\n  __m128 vmax = _mm_set1_ps(max_);\n  __m128 vmin = _mm_set1_ps(min_);\n  for (int i = 0; i < cnt; i++) {\n#if 1\n    __m256 vin0 = _mm256_loadu_ps(ptr_in);\n    __m256 vin1 = _mm256_loadu_ps(ptr_in + 8);\n    vin0 = _mm256_min_ps(_mm256_max_ps(vin0, min_256), max_256);\n    vin1 = _mm256_min_ps(_mm256_max_ps(vin1, min_256), max_256);\n    _mm256_storeu_ps(ptr_out, vin0);\n    _mm256_storeu_ps(ptr_out + 8, vin1);\n#else\n    __m128 vin0 = _mm_loadu_ps(ptr_in);\n    __m128 vin1 = _mm_loadu_ps(ptr_in + 4);\n    __m128 vin2 = _mm_loadu_ps(ptr_in + 8);\n    __m128 vin3 = _mm_loadu_ps(ptr_in + 12);\n\n    vin0 = _mm_min_ps(_mm_max_ps(vin0, vmin), vmax);\n    vin1 = _mm_min_ps(_mm_max_ps(vin1, vmin), vmax);\n    vin2 = _mm_min_ps(_mm_max_ps(vin2, vmin), vmax);\n    vin3 = _mm_min_ps(_mm_max_ps(vin3, vmin), vmax);\n\n    _mm_storeu_ps(ptr_out, vin0);\n    _mm_storeu_ps(ptr_out + 4, vin1);\n    _mm_storeu_ps(ptr_out + 8, vin2);\n    _mm_storeu_ps(ptr_out + 12, vin3);\n#endif\n    ptr_in += 16;\n    ptr_out += 16;\n  }\n  for (int i = 0; i < rem_cnt; i++) {\n    __m128 vin0 = _mm_loadu_ps(ptr_in);\n    vin0 = _mm_min_ps(_mm_max_ps(vin0, vmin), vmax);\n    _mm_storeu_ps(ptr_out, vin0);\n    ptr_in += 4;\n    ptr_out += 4;\n  }\n  for (int i = 0; i < rem_rem; i++) {\n    float tmp = ptr_in[0] > min_ ? ptr_in[0] : min_;\n    ptr_out[0] = tmp < max_ ? tmp : max_;\n    ptr_in++;\n    ptr_out++;\n  }\n}\n\n} /* namespace math */\n} /* namespace x86 */\n} /* namespace lite */\n} /* namespace paddle */\n
-#if defined(__clang__)
-#pragma clang attribute pop
-#elif defined(__GNUC__)
-#pragma GCC pop_options
+  __m128 vmax = _mm_set1_ps(max_);
+  __m128 vmin = _mm_set1_ps(min_);
+  for (int i = 0; i < cnt; i++) {
+#ifdef __AVX__
+    __m256 vin0 = _mm256_loadu_ps(ptr_in);
+    __m256 vin1 = _mm256_loadu_ps(ptr_in + 8);
+    vin0 = _mm256_min_ps(_mm256_max_ps(vin0, min_256), max_256);
+    vin1 = _mm256_min_ps(_mm256_max_ps(vin1, min_256), max_256);
+    _mm256_storeu_ps(ptr_out, vin0);
+    _mm256_storeu_ps(ptr_out + 8, vin1);
+#else
+    __m128 vin0 = _mm_loadu_ps(ptr_in);
+    __m128 vin1 = _mm_loadu_ps(ptr_in + 4);
+    __m128 vin2 = _mm_loadu_ps(ptr_in + 8);
+    __m128 vin3 = _mm_loadu_ps(ptr_in + 12);
+
+    vin0 = _mm_min_ps(_mm_max_ps(vin0, vmin), vmax);
+    vin1 = _mm_min_ps(_mm_max_ps(vin1, vmin), vmax);
+    vin2 = _mm_min_ps(_mm_max_ps(vin2, vmin), vmax);
+    vin3 = _mm_min_ps(_mm_max_ps(vin3, vmin), vmax);
+
+    _mm_storeu_ps(ptr_out, vin0);
+    _mm_storeu_ps(ptr_out + 4, vin1);
+    _mm_storeu_ps(ptr_out + 8, vin2);
+    _mm_storeu_ps(ptr_out + 12, vin3);
 #endif
+    ptr_in += 16;
+    ptr_out += 16;
+  }
+  for (int i = 0; i < rem_cnt; i++) {
+    __m128 vin0 = _mm_loadu_ps(ptr_in);
+    vin0 = _mm_min_ps(_mm_max_ps(vin0, vmin), vmax);
+    _mm_storeu_ps(ptr_out, vin0);
+    ptr_in += 4;
+    ptr_out += 4;
+  }
+  for (int i = 0; i < rem_rem; i++) {
+    float tmp = ptr_in[0] > min_ ? ptr_in[0] : min_;
+    ptr_out[0] = tmp < max_ ? tmp : max_;
+    ptr_in++;
+    ptr_out++;
+  }
+}
+
+} /* namespace math */
+} /* namespace x86 */
+} /* namespace lite */
+} /* namespace paddle */

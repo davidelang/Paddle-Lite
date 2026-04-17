@@ -1,13 +1,416 @@
-/* Copyright (c) 2016 PaddlePaddle Authors. All Rights Reserved.\n\nLicensed under the Apache License, Version 2.0 (the "License");\nyou may not use this file except in compliance with the License.\nYou may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\nUnless required by applicable law or agreed to in writing, software\ndistributed under the License is distributed on an "AS IS" BASIS,\nWITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\nSee the License for the specific language governing permissions and\nlimitations under the License. */\n\n#include <string>\n\n#include "lite/backends/x86/fluid/eigen.h"\n#include "lite/backends/x86/jit/kernels.h"\n#include "lite/backends/x86/legacy_place.h"\n#include "lite/backends/x86/math/blas.h"\n#include "lite/backends/x86/math/math_function.h"\n#include "lite/backends/x86/math/sequence_pooling.h"\n
-#if defined(__clang__)
-#pragma clang attribute push (__attribute__((target("avx,avx2,fma,f16c"))), apply_to=any(function))
-#elif defined(__GNUC__)
-#pragma GCC push_options
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-\n\nnamespace paddle {\nnamespace lite {\nnamespace x86 {\nnamespace math {\n\ntemplate <typename T,\n          int MajorType = Eigen::RowMajor,\n          typename IndexType = Eigen::DenseIndex>\nusing EigenVector = lite::fluid::EigenVector<T, MajorType, IndexType>;\ntemplate <typename T,\n          int MajorType = Eigen::RowMajor,\n          typename IndexType = Eigen::DenseIndex>\nusing EigenMatrix = lite::fluid::EigenMatrix<T, MajorType, IndexType>;\n\ntemplate <typename T, bool is_test>\nclass MaxSeqPoolFunctor {\n public:\n  void operator()(const lite::X86Context& context,\n                  const lite::Tensor& input,\n                  T pad_value,\n                  lite::Tensor* output,\n                  lite::Tensor* index) {\n    auto in_dims = input.dims();\n    auto out_dims = output->dims();\n    auto idx_dims = index->dims();\n    CHECK_GT(in_dims.size(), 1u);\n    CHECK_GT(out_dims.size(), 1u);\n    for (size_t i = 1; i < in_dims.size(); ++i) {\n      CHECK_EQ(in_dims[i], out_dims[i]);\n    }\n    CHECK_EQ(idx_dims, out_dims);\n\n    auto starts = input.lod()[input.lod().size() - 1];\n    const T* in_data = input.data<T>();\n    T* out_data = output->template mutable_data<T>();\n    int* max_index = index->mutable_data<int>();\n\n    int64_t num_seq = out_dims[0];\n    int64_t dim = output->numel() / num_seq;\n    for (int64_t i = 0; i < num_seq; ++i) {\n      if (starts[i] == starts[i + 1]) {\n        for (int64_t k = 0; k < dim; ++k) {\n          out_data[i * dim + k] = pad_value;\n          max_index[i * dim + k] = -1;\n        }\n        continue;\n      }\n      for (int64_t k = 0; k < dim; ++k) {\n        out_data[i * dim + k] = in_data[starts[i] * dim + k];\n        max_index[i * dim + k] = starts[i];\n      }\n      for (size_t j = starts[i] + 1; j < starts[i + 1]; ++j) {\n        for (int64_t k = 0; k < dim; ++k) {\n          if (in_data[j * dim + k] > out_data[i * dim + k]) {\n            out_data[i * dim + k] = in_data[j * dim + k];\n            max_index[i * dim + k] = j;\n          }\n        }\n      }\n    }\n  }\n};\n// Instantisation of Max Sequence Pooling for test phase eg. no need to fill\n// index buffer\ntemplate <typename T>\nclass MaxSeqPoolFunctor<T, true> {\n public:\n  void operator()(const lite::X86Context& context,\n                  const lite::Tensor& input,\n                  T pad_value,\n                  lite::Tensor* output,\n                  lite::Tensor* index) {\n    auto in_dims = input.dims();\n    auto out_dims = output->dims();\n    auto idx_dims = index->dims();\n    CHECK_GT(in_dims.size(), 1u);\n    CHECK_GT(out_dims.size(), 1u);\n    for (size_t i = 1; i < in_dims.size(); ++i) {\n      CHECK_EQ(in_dims[i], out_dims[i]);\n    }\n    for (size_t i = 0; i < idx_dims.size(); ++i) {\n      CHECK_EQ(idx_dims[i], out_dims[i]);\n    }\n    auto starts = input.lod()[input.lod().size() - 1];\n    const T* in_data = input.data<T>();\n    T* out_data = output->template mutable_data<T>();\n    int* max_index = index->template mutable_data<int>();\n\n    int64_t num_seq = out_dims[0];\n    int64_t dim = output->numel() / num_seq;\n    for (int64_t i = 0; i < num_seq; ++i) {\n      if (starts[i] == starts[i + 1]) {\n        for (int64_t k = 0; k < dim; ++k) {\n          out_data[i * dim + k] = pad_value;\n          max_index[i * dim + k] = -1;\n        }\n        continue;\n      }\n      std::memcpy(\n          &out_data[i * dim], &in_data[starts[i] * dim], dim * sizeof(T));\n      for (int64_t k = 0; k < dim; ++k) {\n        max_index[i * dim + k] = starts[i];\n      }\n      for (size_t j = starts[i] + 1; j < starts[i + 1]; ++j) {\n        for (int64_t k = 0; k < dim; ++k) {\n          if (in_data[j * dim + k] > out_data[i * dim + k]) {\n            out_data[i * dim + k] = in_data[j * dim + k];\n            max_index[i * dim + k] = j;\n          }\n        }\n      }\n    }\n  }\n};\ntemplate <typename T>\nclass MaxSeqPoolGradFunctor {\n public:\n  void operator()(const lite::X86Context& context,\n                  const lite::Tensor& out_grad,\n                  const lite::Tensor& index,\n                  lite::Tensor* in_grad) {\n    auto og_dims = out_grad.dims();\n    auto ig_dims = in_grad->dims();\n    auto idx_dims = index.dims();\n    CHECK_GT(og_dims.size(), 1);\n    CHECK_GT(ig_dims.size(), 1);\n    for (size_t i = 1; i < og_dims.size(); ++i) {\n      CHECK_EQ(og_dims[i], ig_dims[i]);\n    }\n    CHECK_EQ(idx_dims, og_dims);\n\n    const T* og_data = out_grad.data<T>();\n    const int* max_index = index.data<int>();\n    T* ig_data = in_grad->template mutable_data<T>();\n\n    SetConstant<TARGET(kX86), T> set_zero;\n    set_zero(context, in_grad, static_cast<T>(0.0));\n    int64_t num_seq = og_dims[0];\n    int64_t dim = out_grad.numel() / num_seq;\n    for (int64_t i = 0; i < num_seq; ++i) {\n      for (int64_t j = 0; j < dim; ++j) {\n        int step_id = max_index[i * dim + j];\n        if (step_id == -1) continue;\n        ig_data[step_id * dim + j] = og_data[i * dim + j];\n      }\n    }\n  }\n};\n\ntemplate <typename T>\nclass LastSeqPoolFunctor {\n public:\n  void operator()(const lite::X86Context& context,\n                  const lite::Tensor& input,\n                  T pad_value,\n                  lite::Tensor* output) {\n    // Create pointers to input and output data\n    auto* in_data = input.data<T>();\n    auto* out_data = output->template mutable_data<T>();\n\n    // Calculate the size of each item in sequence\n    int64_t item_size = input.numel() / input.dims()[0];\n    auto lod = input.lod()[input.lod().size() - 1];\n    int seq_num = static_cast<int>(lod.size()) - 1;\n    for (int i = 0; i < seq_num; ++i) {\n      // Calculate the length of each sequence\n      int64_t seq_len = static_cast<int64_t>(lod[i + 1] - lod[i]);\n      if (seq_len == 0) {\n        for (int j = 0; j < item_size; ++j) {\n          out_data[j] = pad_value;\n        }\n      } else {\n        // Point to the begin of next sequence\n        in_data += seq_len * item_size;\n        // Copy the last item of sequence to output\n        std::memcpy(out_data, (in_data - item_size), item_size * sizeof(T));\n      }\n      out_data += item_size;\n    }\n  }\n};\n\ntemplate <typename T>\nclass FirstSeqPoolFunctor {\n public:\n  void operator()(const lite::X86Context& context,\n                  const lite::Tensor& input,\n                  T pad_value,\n                  lite::Tensor* output) {\n    // Create pointers to input and output data\n    auto* in_data = input.data<T>();\n    auto* out_data = output->template mutable_data<T>();\n\n    // Calculate the size of each item in sequence\n    int64_t item_size = input.numel() / input.dims()[0];\n    auto lod = input.lod()[input.lod().size() - 1];\n    int seq_num = static_cast<int>(lod.size()) - 1;\n    for (int i = 0; i < seq_num; ++i) {\n      // Calculate the length of each sequence\n      int64_t seq_len = static_cast<int64_t>(lod[i + 1] - lod[i]);\n      if (seq_len == 0) {\n        for (int j = 0; j < item_size; ++j) {\n          out_data[j] = pad_value;\n        }\n      } else {\n        // Copy the first item of sequence to output\n        std::memcpy(out_data, in_data, item_size * sizeof(T));\n        // Point to the next sequence\n        in_data += seq_len * item_size;\n      }\n      out_data += item_size;\n    }\n  }\n};\n\ntemplate <typename T>\nclass SumSeqPoolGradFunctor {\n public:\n  void operator()(const lite::X86Context& context,\n                  const lite::Tensor& out_grad,\n                  lite::Tensor* in_grad) {\n    auto lod = in_grad->lod()[0];\n    int64_t out_w = out_grad.numel() / out_grad.dims()[0];\n    int64_t in_w = in_grad->numel() / in_grad->dims()[0];\n    CHECK(in_w == out_w);\n    const T* out_g_data = out_grad.data<T>();\n    T* in_g_data = in_grad->template mutable_data<T>(TARGET(kX86));\n    auto blas = math::GetBlas<TARGET(kX86), T>(context);\n    for (int i = 0; i < static_cast<int>(lod.size()) - 1; ++i) {\n      int64_t h = static_cast<int64_t>(lod[i + 1] - lod[i]);\n      if (h == 0) continue;\n      int64_t in_offset = lod[i] * in_w;\n      const T* out_pos = out_g_data + i * out_w;\n      T* in_pos = in_g_data + in_offset;\n      for (int r = 0; r != h; ++r) {\n        blas.VCOPY(in_w, out_pos, in_pos + r * in_w);\n      }\n    }\n  }\n};\n\ntemplate <typename T>\nclass SequencePoolFunctor<TARGET(kX86), T> {\n public:\n  /* max pool has index output */\n  void operator()(const lite::X86Context& context,\n                  const std::string pooltype,\n                  T pad_value,\n                  const lite::Tensor& input,\n                  lite::Tensor* output,\n                  bool is_test,\n                  lite::Tensor* index = nullptr) {\n    if (pooltype == "MAX") {\n      if (is_test) {\n        math::MaxSeqPoolFunctor<T, true> max_pool;\n        max_pool(context, input, pad_value, output, index);\n      } else {\n        math::MaxSeqPoolFunctor<T, false> max_pool;\n        max_pool(context, input, pad_value, output, index);\n      }\n      return;\n    }\n    if (pooltype == "LAST") {\n      math::LastSeqPoolFunctor<T> last_pool;\n      last_pool(context, input, pad_value, output);\n      return;\n    }\n    if (pooltype == "FIRST") {\n      math::FirstSeqPoolFunctor<T> first_pool;\n      first_pool(context, input, pad_value, output);\n      return;\n    }\n\n    auto lod = input.lod()[input.lod().size() - 1];\n    if (pooltype == "SUM") {\n      const T* src = input.data<T>();\n      T* dst = output->template mutable_data<T>(TARGET(kX86));\n      jit::seq_pool_attr_t attr(\n          static_cast<int>(input.numel() / input.dims()[0]),\n          jit::SeqPoolType::kSum);\n      auto seqpool =\n          jit::KernelFuncs<jit::SeqPoolTuple<T>, lite::fluid::CPUPlace>::Cache()\n              .At(attr);\n      for (int i = 0; i < static_cast<int>(lod.size()) - 1; ++i) {\n        attr.h = static_cast<int>(lod[i + 1] - lod[i]);\n        if (attr.h == 0) {\n          for (int j = 0; j < attr.w; ++j) {\n            dst[j] = pad_value;\n          }\n        } else {\n          seqpool(src, dst, &attr);\n        }\n        dst += attr.w;\n        src += attr.h * attr.w;\n      }\n      return;\n    }\n    auto eigen_device = lite::fluid::EigenDeviceType<TARGET(kX86)>();\n    for (int i = 0; i < static_cast<int>(lod.size()) - 1; ++i) {\n      Tensor out_t = output->Slice<float>(i, i + 1);\n      int64_t w = input.numel() / input.dims()[0];\n      if (lod[i] == lod[i + 1]) {\n        for (int j = 0; j < w; ++j) {\n          out_t.mutable_data<T>()[j] = pad_value;\n        }\n        continue;\n      }\n      Tensor in_t = input.Slice<float>(static_cast<int>(lod[i]),\n                                       static_cast<int>(lod[i + 1]));\n      int64_t h = static_cast<int64_t>(lod[i + 1] - lod[i]);\n      auto in_e = EigenMatrix<T>::From(in_t, lite::DDim({h, w}));\n      auto out_e = EigenVector<T>::Flatten(out_t);\n      if (pooltype == "AVERAGE") {\n        out_e.device(eigen_device) = in_e.mean(Eigen::array<int, 1>({{0}}));\n      } else if (pooltype == "SQRT") {\n        out_e.device(eigen_device) = in_e.sum(Eigen::array<int, 1>({{0}})) /\n                                     std::sqrt(static_cast<T>(h));\n      } else {\n        LOG(FATAL) << "unsupported pooling pooltype";\n      }\n    }\n  }\n};\n\ntemplate <typename T>\nclass SequencePoolGradFunctor<TARGET(kX86), T> {\n public:\n  void operator()(const lite::X86Context& context,\n                  const std::string pooltype,\n                  const lite::Tensor& out_grad,\n                  lite::Tensor* in_grad,\n                  /* max pool has index */\n                  const lite::Tensor* index = nullptr) {\n    if (pooltype == "MAX") {\n      math::MaxSeqPoolGradFunctor<T> max_pool_grad;\n      max_pool_grad(context, out_grad, *index, in_grad);\n      return;\n    }\n\n    if (pooltype == "LAST" || pooltype == "FIRST") {\n      // set X@Grad be zero at first when pooltype is LAST/FIRST\n      math::SetConstant<TARGET(kX86), T> functor;\n      functor(context, in_grad, 0);\n    }\n\n    if (pooltype == "SUM") {\n      math::SumSeqPoolGradFunctor<T> sum_pool_grad;\n      sum_pool_grad(context, out_grad, in_grad);\n      return;\n    }\n\n    auto lod = in_grad->lod()[0];\n\n    auto eigen_device = lite::fluid::EigenDeviceType<TARGET(kX86)>();\n    for (int i = 0; i < static_cast<int>(lod.size()) - 1; ++i) {\n      if (lod[i] == lod[i + 1]) continue;\n      auto in_g_t = in_grad->Slice<float>(static_cast<int>(lod[i]),\n                                          static_cast<int>(lod[i + 1]));\n      auto out_g_t = out_grad.Slice<float>(i, i + 1);\n      int64_t h = static_cast<int64_t>(lod[i + 1] - lod[i]);\n      int64_t w = in_grad->numel() / in_grad->dims()[0];\n      auto in_g_e = EigenMatrix<T>::From(in_g_t, DDim({h, w}));\n      auto out_g_e = EigenMatrix<T>::From(out_g_t, DDim({1, w}));\n      auto out_g_e_v = EigenVector<T>::Flatten(out_g_t);\n      Eigen::DSizes<int, 2> bcast(h, 1);\n\n      if (pooltype == "AVERAGE") {\n        in_g_e.device(eigen_device) =\n            (out_g_e / static_cast<T>(h)).broadcast(bcast);\n      } else if (pooltype == "SQRT") {\n        in_g_e.device(eigen_device) =\n            (out_g_e / std::sqrt(static_cast<T>(h))).broadcast(bcast);\n      } else if (pooltype == "LAST") {\n        in_g_e.chip(h - 1, 0).device(eigen_device) = out_g_e_v;\n      } else if (pooltype == "FIRST") {\n        in_g_e.chip(0, 0).device(eigen_device) = out_g_e_v;\n      } else {\n        LOG(FATAL) << "unsupported pooling pooltype";\n      }\n    }\n  }\n};\n\ntemplate class SequencePoolFunctor<TARGET(kX86), float>;\n// Note: these implementations have not been called yet\n// Template class SequencePoolFunctor<TARGET(kX86), double>;\n// Template class SequencePoolGradFunctor<TARGET(kX86), float>;\n// Template class SequencePoolGradFunctor<TARGET(kX86), double>;\n\n}  // namespace math\n}  // namespace x86\n}  // namespace lite\n}  // namespace paddle\n
-#if defined(__clang__)
-#pragma clang attribute pop
-#elif defined(__GNUC__)
-#pragma GCC pop_options
-#endif
+/* Copyright (c) 2016 PaddlePaddle Authors. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License. */
+
+#include <string>
+
+#include "lite/backends/x86/fluid/eigen.h"
+#include "lite/backends/x86/jit/kernels.h"
+#include "lite/backends/x86/legacy_place.h"
+#include "lite/backends/x86/math/blas.h"
+#include "lite/backends/x86/math/math_function.h"
+#include "lite/backends/x86/math/sequence_pooling.h"
+
+namespace paddle {
+namespace lite {
+namespace x86 {
+namespace math {
+
+template <typename T,
+          int MajorType = Eigen::RowMajor,
+          typename IndexType = Eigen::DenseIndex>
+using EigenVector = lite::fluid::EigenVector<T, MajorType, IndexType>;
+template <typename T,
+          int MajorType = Eigen::RowMajor,
+          typename IndexType = Eigen::DenseIndex>
+using EigenMatrix = lite::fluid::EigenMatrix<T, MajorType, IndexType>;
+
+template <typename T, bool is_test>
+class MaxSeqPoolFunctor {
+ public:
+  void operator()(const lite::X86Context& context,
+                  const lite::Tensor& input,
+                  T pad_value,
+                  lite::Tensor* output,
+                  lite::Tensor* index) {
+    auto in_dims = input.dims();
+    auto out_dims = output->dims();
+    auto idx_dims = index->dims();
+    CHECK_GT(in_dims.size(), 1u);
+    CHECK_GT(out_dims.size(), 1u);
+    for (size_t i = 1; i < in_dims.size(); ++i) {
+      CHECK_EQ(in_dims[i], out_dims[i]);
+    }
+    CHECK_EQ(idx_dims, out_dims);
+
+    auto starts = input.lod()[input.lod().size() - 1];
+    const T* in_data = input.data<T>();
+    T* out_data = output->template mutable_data<T>();
+    int* max_index = index->mutable_data<int>();
+
+    int64_t num_seq = out_dims[0];
+    int64_t dim = output->numel() / num_seq;
+    for (int64_t i = 0; i < num_seq; ++i) {
+      if (starts[i] == starts[i + 1]) {
+        for (int64_t k = 0; k < dim; ++k) {
+          out_data[i * dim + k] = pad_value;
+          max_index[i * dim + k] = -1;
+        }
+        continue;
+      }
+      for (int64_t k = 0; k < dim; ++k) {
+        out_data[i * dim + k] = in_data[starts[i] * dim + k];
+        max_index[i * dim + k] = starts[i];
+      }
+      for (size_t j = starts[i] + 1; j < starts[i + 1]; ++j) {
+        for (int64_t k = 0; k < dim; ++k) {
+          if (in_data[j * dim + k] > out_data[i * dim + k]) {
+            out_data[i * dim + k] = in_data[j * dim + k];
+            max_index[i * dim + k] = j;
+          }
+        }
+      }
+    }
+  }
+};
+// Instantisation of Max Sequence Pooling for test phase eg. no need to fill
+// index buffer
+template <typename T>
+class MaxSeqPoolFunctor<T, true> {
+ public:
+  void operator()(const lite::X86Context& context,
+                  const lite::Tensor& input,
+                  T pad_value,
+                  lite::Tensor* output,
+                  lite::Tensor* index) {
+    auto in_dims = input.dims();
+    auto out_dims = output->dims();
+    auto idx_dims = index->dims();
+    CHECK_GT(in_dims.size(), 1u);
+    CHECK_GT(out_dims.size(), 1u);
+    for (size_t i = 1; i < in_dims.size(); ++i) {
+      CHECK_EQ(in_dims[i], out_dims[i]);
+    }
+    for (size_t i = 0; i < idx_dims.size(); ++i) {
+      CHECK_EQ(idx_dims[i], out_dims[i]);
+    }
+    auto starts = input.lod()[input.lod().size() - 1];
+    const T* in_data = input.data<T>();
+    T* out_data = output->template mutable_data<T>();
+    int* max_index = index->template mutable_data<int>();
+
+    int64_t num_seq = out_dims[0];
+    int64_t dim = output->numel() / num_seq;
+    for (int64_t i = 0; i < num_seq; ++i) {
+      if (starts[i] == starts[i + 1]) {
+        for (int64_t k = 0; k < dim; ++k) {
+          out_data[i * dim + k] = pad_value;
+          max_index[i * dim + k] = -1;
+        }
+        continue;
+      }
+      std::memcpy(
+          &out_data[i * dim], &in_data[starts[i] * dim], dim * sizeof(T));
+      for (int64_t k = 0; k < dim; ++k) {
+        max_index[i * dim + k] = starts[i];
+      }
+      for (size_t j = starts[i] + 1; j < starts[i + 1]; ++j) {
+        for (int64_t k = 0; k < dim; ++k) {
+          if (in_data[j * dim + k] > out_data[i * dim + k]) {
+            out_data[i * dim + k] = in_data[j * dim + k];
+            max_index[i * dim + k] = j;
+          }
+        }
+      }
+    }
+  }
+};
+template <typename T>
+class MaxSeqPoolGradFunctor {
+ public:
+  void operator()(const lite::X86Context& context,
+                  const lite::Tensor& out_grad,
+                  const lite::Tensor& index,
+                  lite::Tensor* in_grad) {
+    auto og_dims = out_grad.dims();
+    auto ig_dims = in_grad->dims();
+    auto idx_dims = index.dims();
+    CHECK_GT(og_dims.size(), 1);
+    CHECK_GT(ig_dims.size(), 1);
+    for (size_t i = 1; i < og_dims.size(); ++i) {
+      CHECK_EQ(og_dims[i], ig_dims[i]);
+    }
+    CHECK_EQ(idx_dims, og_dims);
+
+    const T* og_data = out_grad.data<T>();
+    const int* max_index = index.data<int>();
+    T* ig_data = in_grad->template mutable_data<T>();
+
+    SetConstant<TARGET(kX86), T> set_zero;
+    set_zero(context, in_grad, static_cast<T>(0.0));
+    int64_t num_seq = og_dims[0];
+    int64_t dim = out_grad.numel() / num_seq;
+    for (int64_t i = 0; i < num_seq; ++i) {
+      for (int64_t j = 0; j < dim; ++j) {
+        int step_id = max_index[i * dim + j];
+        if (step_id == -1) continue;
+        ig_data[step_id * dim + j] = og_data[i * dim + j];
+      }
+    }
+  }
+};
+
+template <typename T>
+class LastSeqPoolFunctor {
+ public:
+  void operator()(const lite::X86Context& context,
+                  const lite::Tensor& input,
+                  T pad_value,
+                  lite::Tensor* output) {
+    // Create pointers to input and output data
+    auto* in_data = input.data<T>();
+    auto* out_data = output->template mutable_data<T>();
+
+    // Calculate the size of each item in sequence
+    int64_t item_size = input.numel() / input.dims()[0];
+    auto lod = input.lod()[input.lod().size() - 1];
+    int seq_num = static_cast<int>(lod.size()) - 1;
+    for (int i = 0; i < seq_num; ++i) {
+      // Calculate the length of each sequence
+      int64_t seq_len = static_cast<int64_t>(lod[i + 1] - lod[i]);
+      if (seq_len == 0) {
+        for (int j = 0; j < item_size; ++j) {
+          out_data[j] = pad_value;
+        }
+      } else {
+        // Point to the begin of next sequence
+        in_data += seq_len * item_size;
+        // Copy the last item of sequence to output
+        std::memcpy(out_data, (in_data - item_size), item_size * sizeof(T));
+      }
+      out_data += item_size;
+    }
+  }
+};
+
+template <typename T>
+class FirstSeqPoolFunctor {
+ public:
+  void operator()(const lite::X86Context& context,
+                  const lite::Tensor& input,
+                  T pad_value,
+                  lite::Tensor* output) {
+    // Create pointers to input and output data
+    auto* in_data = input.data<T>();
+    auto* out_data = output->template mutable_data<T>();
+
+    // Calculate the size of each item in sequence
+    int64_t item_size = input.numel() / input.dims()[0];
+    auto lod = input.lod()[input.lod().size() - 1];
+    int seq_num = static_cast<int>(lod.size()) - 1;
+    for (int i = 0; i < seq_num; ++i) {
+      // Calculate the length of each sequence
+      int64_t seq_len = static_cast<int64_t>(lod[i + 1] - lod[i]);
+      if (seq_len == 0) {
+        for (int j = 0; j < item_size; ++j) {
+          out_data[j] = pad_value;
+        }
+      } else {
+        // Copy the first item of sequence to output
+        std::memcpy(out_data, in_data, item_size * sizeof(T));
+        // Point to the next sequence
+        in_data += seq_len * item_size;
+      }
+      out_data += item_size;
+    }
+  }
+};
+
+template <typename T>
+class SumSeqPoolGradFunctor {
+ public:
+  void operator()(const lite::X86Context& context,
+                  const lite::Tensor& out_grad,
+                  lite::Tensor* in_grad) {
+    auto lod = in_grad->lod()[0];
+    int64_t out_w = out_grad.numel() / out_grad.dims()[0];
+    int64_t in_w = in_grad->numel() / in_grad->dims()[0];
+    CHECK(in_w == out_w);
+    const T* out_g_data = out_grad.data<T>();
+    T* in_g_data = in_grad->template mutable_data<T>(TARGET(kX86));
+    auto blas = math::GetBlas<TARGET(kX86), T>(context);
+    for (int i = 0; i < static_cast<int>(lod.size()) - 1; ++i) {
+      int64_t h = static_cast<int64_t>(lod[i + 1] - lod[i]);
+      if (h == 0) continue;
+      int64_t in_offset = lod[i] * in_w;
+      const T* out_pos = out_g_data + i * out_w;
+      T* in_pos = in_g_data + in_offset;
+      for (int r = 0; r != h; ++r) {
+        blas.VCOPY(in_w, out_pos, in_pos + r * in_w);
+      }
+    }
+  }
+};
+
+template <typename T>
+class SequencePoolFunctor<TARGET(kX86), T> {
+ public:
+  /* max pool has index output */
+  void operator()(const lite::X86Context& context,
+                  const std::string pooltype,
+                  T pad_value,
+                  const lite::Tensor& input,
+                  lite::Tensor* output,
+                  bool is_test,
+                  lite::Tensor* index = nullptr) {
+    if (pooltype == "MAX") {
+      if (is_test) {
+        math::MaxSeqPoolFunctor<T, true> max_pool;
+        max_pool(context, input, pad_value, output, index);
+      } else {
+        math::MaxSeqPoolFunctor<T, false> max_pool;
+        max_pool(context, input, pad_value, output, index);
+      }
+      return;
+    }
+    if (pooltype == "LAST") {
+      math::LastSeqPoolFunctor<T> last_pool;
+      last_pool(context, input, pad_value, output);
+      return;
+    }
+    if (pooltype == "FIRST") {
+      math::FirstSeqPoolFunctor<T> first_pool;
+      first_pool(context, input, pad_value, output);
+      return;
+    }
+
+    auto lod = input.lod()[input.lod().size() - 1];
+    if (pooltype == "SUM") {
+      const T* src = input.data<T>();
+      T* dst = output->template mutable_data<T>(TARGET(kX86));
+      jit::seq_pool_attr_t attr(
+          static_cast<int>(input.numel() / input.dims()[0]),
+          jit::SeqPoolType::kSum);
+      auto seqpool =
+          jit::KernelFuncs<jit::SeqPoolTuple<T>, lite::fluid::CPUPlace>::Cache()
+              .At(attr);
+      for (int i = 0; i < static_cast<int>(lod.size()) - 1; ++i) {
+        attr.h = static_cast<int>(lod[i + 1] - lod[i]);
+        if (attr.h == 0) {
+          for (int j = 0; j < attr.w; ++j) {
+            dst[j] = pad_value;
+          }
+        } else {
+          seqpool(src, dst, &attr);
+        }
+        dst += attr.w;
+        src += attr.h * attr.w;
+      }
+      return;
+    }
+    auto eigen_device = lite::fluid::EigenDeviceType<TARGET(kX86)>();
+    for (int i = 0; i < static_cast<int>(lod.size()) - 1; ++i) {
+      Tensor out_t = output->Slice<float>(i, i + 1);
+      int64_t w = input.numel() / input.dims()[0];
+      if (lod[i] == lod[i + 1]) {
+        for (int j = 0; j < w; ++j) {
+          out_t.mutable_data<T>()[j] = pad_value;
+        }
+        continue;
+      }
+      Tensor in_t = input.Slice<float>(static_cast<int>(lod[i]),
+                                       static_cast<int>(lod[i + 1]));
+      int64_t h = static_cast<int64_t>(lod[i + 1] - lod[i]);
+      auto in_e = EigenMatrix<T>::From(in_t, lite::DDim({h, w}));
+      auto out_e = EigenVector<T>::Flatten(out_t);
+      if (pooltype == "AVERAGE") {
+        out_e.device(eigen_device) = in_e.mean(Eigen::array<int, 1>({{0}}));
+      } else if (pooltype == "SQRT") {
+        out_e.device(eigen_device) = in_e.sum(Eigen::array<int, 1>({{0}})) /
+                                     std::sqrt(static_cast<T>(h));
+      } else {
+        LOG(FATAL) << "unsupported pooling pooltype";
+      }
+    }
+  }
+};
+
+template <typename T>
+class SequencePoolGradFunctor<TARGET(kX86), T> {
+ public:
+  void operator()(const lite::X86Context& context,
+                  const std::string pooltype,
+                  const lite::Tensor& out_grad,
+                  lite::Tensor* in_grad,
+                  /* max pool has index */
+                  const lite::Tensor* index = nullptr) {
+    if (pooltype == "MAX") {
+      math::MaxSeqPoolGradFunctor<T> max_pool_grad;
+      max_pool_grad(context, out_grad, *index, in_grad);
+      return;
+    }
+
+    if (pooltype == "LAST" || pooltype == "FIRST") {
+      // set X@Grad be zero at first when pooltype is LAST/FIRST
+      math::SetConstant<TARGET(kX86), T> functor;
+      functor(context, in_grad, 0);
+    }
+
+    if (pooltype == "SUM") {
+      math::SumSeqPoolGradFunctor<T> sum_pool_grad;
+      sum_pool_grad(context, out_grad, in_grad);
+      return;
+    }
+
+    auto lod = in_grad->lod()[0];
+
+    auto eigen_device = lite::fluid::EigenDeviceType<TARGET(kX86)>();
+    for (int i = 0; i < static_cast<int>(lod.size()) - 1; ++i) {
+      if (lod[i] == lod[i + 1]) continue;
+      auto in_g_t = in_grad->Slice<float>(static_cast<int>(lod[i]),
+                                          static_cast<int>(lod[i + 1]));
+      auto out_g_t = out_grad.Slice<float>(i, i + 1);
+      int64_t h = static_cast<int64_t>(lod[i + 1] - lod[i]);
+      int64_t w = in_grad->numel() / in_grad->dims()[0];
+      auto in_g_e = EigenMatrix<T>::From(in_g_t, DDim({h, w}));
+      auto out_g_e = EigenMatrix<T>::From(out_g_t, DDim({1, w}));
+      auto out_g_e_v = EigenVector<T>::Flatten(out_g_t);
+      Eigen::DSizes<int, 2> bcast(h, 1);
+
+      if (pooltype == "AVERAGE") {
+        in_g_e.device(eigen_device) =
+            (out_g_e / static_cast<T>(h)).broadcast(bcast);
+      } else if (pooltype == "SQRT") {
+        in_g_e.device(eigen_device) =
+            (out_g_e / std::sqrt(static_cast<T>(h))).broadcast(bcast);
+      } else if (pooltype == "LAST") {
+        in_g_e.chip(h - 1, 0).device(eigen_device) = out_g_e_v;
+      } else if (pooltype == "FIRST") {
+        in_g_e.chip(0, 0).device(eigen_device) = out_g_e_v;
+      } else {
+        LOG(FATAL) << "unsupported pooling pooltype";
+      }
+    }
+  }
+};
+
+template class SequencePoolFunctor<TARGET(kX86), float>;
+// Note: these implementations have not been called yet
+// Template class SequencePoolFunctor<TARGET(kX86), double>;
+// Template class SequencePoolGradFunctor<TARGET(kX86), float>;
+// Template class SequencePoolGradFunctor<TARGET(kX86), double>;
+
+}  // namespace math
+}  // namespace x86
+}  // namespace lite
+}  // namespace paddle

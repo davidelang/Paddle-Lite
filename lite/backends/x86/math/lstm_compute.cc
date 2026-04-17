@@ -1,13 +1,101 @@
-/* Copyright (c) 2016 PaddlePaddle Authors. All Rights Reserved.\n\nLicensed under the Apache License, Version 2.0 (the "License");\nyou may not use this file except in compliance with the License.\nYou may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\nUnless required by applicable law or agreed to in writing, software\ndistributed under the License is distributed on an "AS IS" BASIS,\nWITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\nSee the License for the specific language governing permissions and\nlimitations under the License. */\n\n#include "lite/backends/x86/math/lstm_compute.h"\n#include "lite/backends/x86/math/lstm_cpu_kernel.h"\n#include "lite/backends/x86/math/lstm_kernel.h"\n
-#if defined(__clang__)
-#pragma clang attribute push (__attribute__((target("avx,avx2,fma,f16c"))), apply_to=any(function))
-#elif defined(__GNUC__)
-#pragma GCC push_options
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-\n\nnamespace paddle {\nnamespace lite {\nnamespace x86 {\nnamespace math {\n\ntemplate <class T>\nstruct LstmUnitFunctor<lite::TargetType::kX86, T> {\n  static void compute(const lite::X86Context& context,\n                      LstmMetaValue<T> value,\n                      int frame_size,\n                      int batch_size,\n                      T cell_clip,\n                      const detail::ActivationType& gate_act,\n                      const detail::ActivationType& cell_act,\n                      const detail::ActivationType& cand_act) {\n    for (int b = 0; b < batch_size; b++) {\n      detail::cpu_lstm_forward(detail::forward::lstm<T>(),\n                               value,\n                               frame_size,\n                               cell_clip,\n                               cand_act,\n                               gate_act,\n                               cell_act);\n      value.gate_value += frame_size * 4;\n      value.state_value += frame_size;\n      value.state_active_value += frame_size;\n      value.output_value += frame_size;\n      if (value.prev_state_value) {\n        value.prev_state_value += frame_size;\n      }\n    }\n  }\n};\n\ntemplate <class T>\nstruct LstmUnitGradFunctor<lite::TargetType::kX86, T> {\n  static void compute(const lite::X86Context& context,\n                      LstmMetaValue<T> value,\n                      LstmMetaGrad<T> grad,\n                      int frame_size,\n                      int batch_size,\n                      T cell_clip,\n                      const detail::ActivationType& gate_act,\n                      const detail::ActivationType& cell_act,\n                      const detail::ActivationType& cand_act) {\n    for (int b = 0; b < batch_size; b++) {\n      detail::cpu_lstm_backward(detail::backward::lstm<T>(),\n                                value,\n                                grad,\n                                frame_size,\n                                cell_clip,\n                                cand_act,\n                                gate_act,\n                                cell_act);\n\n      value.gate_value += frame_size * 4;\n      value.state_value += frame_size;\n      value.state_active_value += frame_size;\n      value.output_value += frame_size;\n      if (value.prev_state_value) {\n        value.prev_state_value += frame_size;\n      }\n\n      grad.gate_grad += frame_size * 4;\n      grad.state_grad += frame_size;\n      grad.state_active_grad += frame_size;\n      grad.output_grad += frame_size;\n      if (grad.prev_state_grad) {\n        grad.prev_state_grad += frame_size;\n      }\n    }\n  }\n};\n\ntemplate class LstmUnitFunctor<lite::TargetType::kX86, float>;\ntemplate class LstmUnitFunctor<lite::TargetType::kX86, double>;\ntemplate class LstmUnitGradFunctor<lite::TargetType::kX86, float>;\ntemplate class LstmUnitGradFunctor<lite::TargetType::kX86, double>;\n\n}  // namespace math\n}  // namespace x86\n}  // namespace lite\n}  // namespace paddle\n
-#if defined(__clang__)
-#pragma clang attribute pop
-#elif defined(__GNUC__)
-#pragma GCC pop_options
-#endif
+/* Copyright (c) 2016 PaddlePaddle Authors. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License. */
+
+#include "lite/backends/x86/math/lstm_compute.h"
+#include "lite/backends/x86/math/lstm_cpu_kernel.h"
+#include "lite/backends/x86/math/lstm_kernel.h"
+
+namespace paddle {
+namespace lite {
+namespace x86 {
+namespace math {
+
+template <class T>
+struct LstmUnitFunctor<lite::TargetType::kX86, T> {
+  static void compute(const lite::X86Context& context,
+                      LstmMetaValue<T> value,
+                      int frame_size,
+                      int batch_size,
+                      T cell_clip,
+                      const detail::ActivationType& gate_act,
+                      const detail::ActivationType& cell_act,
+                      const detail::ActivationType& cand_act) {
+    for (int b = 0; b < batch_size; b++) {
+      detail::cpu_lstm_forward(detail::forward::lstm<T>(),
+                               value,
+                               frame_size,
+                               cell_clip,
+                               cand_act,
+                               gate_act,
+                               cell_act);
+      value.gate_value += frame_size * 4;
+      value.state_value += frame_size;
+      value.state_active_value += frame_size;
+      value.output_value += frame_size;
+      if (value.prev_state_value) {
+        value.prev_state_value += frame_size;
+      }
+    }
+  }
+};
+
+template <class T>
+struct LstmUnitGradFunctor<lite::TargetType::kX86, T> {
+  static void compute(const lite::X86Context& context,
+                      LstmMetaValue<T> value,
+                      LstmMetaGrad<T> grad,
+                      int frame_size,
+                      int batch_size,
+                      T cell_clip,
+                      const detail::ActivationType& gate_act,
+                      const detail::ActivationType& cell_act,
+                      const detail::ActivationType& cand_act) {
+    for (int b = 0; b < batch_size; b++) {
+      detail::cpu_lstm_backward(detail::backward::lstm<T>(),
+                                value,
+                                grad,
+                                frame_size,
+                                cell_clip,
+                                cand_act,
+                                gate_act,
+                                cell_act);
+
+      value.gate_value += frame_size * 4;
+      value.state_value += frame_size;
+      value.state_active_value += frame_size;
+      value.output_value += frame_size;
+      if (value.prev_state_value) {
+        value.prev_state_value += frame_size;
+      }
+
+      grad.gate_grad += frame_size * 4;
+      grad.state_grad += frame_size;
+      grad.state_active_grad += frame_size;
+      grad.output_grad += frame_size;
+      if (grad.prev_state_grad) {
+        grad.prev_state_grad += frame_size;
+      }
+    }
+  }
+};
+
+template class LstmUnitFunctor<lite::TargetType::kX86, float>;
+template class LstmUnitFunctor<lite::TargetType::kX86, double>;
+template class LstmUnitGradFunctor<lite::TargetType::kX86, float>;
+template class LstmUnitGradFunctor<lite::TargetType::kX86, double>;
+
+}  // namespace math
+}  // namespace x86
+}  // namespace lite
+}  // namespace paddle

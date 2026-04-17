@@ -1,13 +1,173 @@
-// Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.\n//\n// Licensed under the Apache License, Version 2.0 (the "License");\n// you may not use this file except in compliance with the License.\n// You may obtain a copy of the License at\n//\n//     http://www.apache.org/licenses/LICENSE-2.0\n//\n// Unless required by applicable law or agreed to in writing, software\n// distributed under the License is distributed on an "AS IS" BASIS,\n// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n// See the License for the specific language governing permissions and\n// limitations under the License.\n\n#include "lite/backends/x86/math/avx/instance_norm.h"\n#include <immintrin.h>\n#include <cmath>\n
-#if defined(__clang__)
-#pragma clang attribute push (__attribute__((target("avx,avx2,fma,f16c"))), apply_to=any(function))
-#elif defined(__GNUC__)
-#pragma GCC push_options
-#pragma GCC target("avx,avx2,fma,f16c")
-#endif
-\n\nnamespace paddle {\nnamespace lite {\nnamespace x86 {\nnamespace math {\n\nvoid instance_norm(const float* in,\n                   float* out,\n                   const int n,\n                   const int c,\n                   const int height,\n                   const int width,\n                   const float epsilon,\n                   const float* scale,\n                   const float* bias,\n                   float* saved_mean,\n                   float* saved_variance) {\n  int nc = n * c;\n  int spatial_size = height * width;\n\n// compute saved_mean and saved_variance\n#pragma omp parallel for\n  for (int i = 0; i < nc; ++i) {\n    const float* in_p = in + i * spatial_size;\n    float sum_spatial = 0.f;\n    float summ_spatial = 0.f;\n    for (int h = 0; h < height; ++h) {\n      int w = width;\n\n      __m128 sum0 = _mm_set1_ps(0.f);\n      __m128 sum1 = _mm_set1_ps(0.f);\n      __m128 sum2 = _mm_set1_ps(0.f);\n      __m128 sum3 = _mm_set1_ps(0.f);\n      __m128 square_sum0 = _mm_set1_ps(0.f);\n      __m128 square_sum1 = _mm_set1_ps(0.f);\n      __m128 square_sum2 = _mm_set1_ps(0.f);\n      __m128 square_sum3 = _mm_set1_ps(0.f);\n      __m128 in0, in1, in2, in3;\n      for (; w > 15; w -= 16) {\n        in0 = _mm_loadu_ps(in_p);\n        in1 = _mm_loadu_ps(in_p + 4);\n        in2 = _mm_loadu_ps(in_p + 8);\n        in3 = _mm_loadu_ps(in_p + 12);\n        // add x\n        sum0 = _mm_add_ps(sum0, in0);\n        sum1 = _mm_add_ps(sum1, in1);\n        sum2 = _mm_add_ps(sum2, in2);\n        sum3 = _mm_add_ps(sum3, in3);\n        // add x * x\n        square_sum0 = _mm_fmadd_ps(in0, in0, square_sum0);\n        square_sum1 = _mm_fmadd_ps(in1, in1, square_sum1);\n        square_sum2 = _mm_fmadd_ps(in2, in2, square_sum2);\n        square_sum3 = _mm_fmadd_ps(in3, in3, square_sum3);\n\n        in_p += 16;\n      }\n      for (; w > 7; w -= 8) {\n        in0 = _mm_loadu_ps(in_p);\n        in1 = _mm_loadu_ps(in_p + 4);\n        sum0 = _mm_add_ps(sum0, in0);\n        sum1 = _mm_add_ps(sum1, in1);\n        square_sum0 = _mm_fmadd_ps(in0, in0, square_sum0);\n        square_sum1 = _mm_fmadd_ps(in1, in1, square_sum1);\n        in_p += 8;\n      }\n      for (; w > 3; w -= 4) {\n        in0 = _mm_loadu_ps(in_p);\n        sum0 = _mm_add_ps(sum0, in0);\n        square_sum0 = _mm_fmadd_ps(in0, in0, square_sum0);\n        in_p += 4;\n      }\n      float sum = 0.f;\n      float summ = 0.f;\n      for (; w > 0; w--) {\n        sum += *in_p;\n        summ += (*in_p) * (*in_p);\n        in_p++;\n      }\n\n      sum0 = _mm_add_ps(sum0, sum1);\n      sum2 = _mm_add_ps(sum2, sum3);\n      square_sum0 = _mm_add_ps(square_sum0, square_sum1);\n      square_sum2 = _mm_add_ps(square_sum2, square_sum3);\n\n      sum0 = _mm_add_ps(sum0, sum2);\n      square_sum0 = _mm_add_ps(square_sum0, square_sum2);\n\n      __m128 r = _mm_hadd_ps(sum0, square_sum0);\n      r = _mm_hadd_ps(r, r);\n      float buf[4];\n      _mm_storeu_ps(buf, r);\n      sum += buf[0];\n      summ += buf[1];\n      sum_spatial += sum;\n      summ_spatial += summ;\n    }\n    float mean = sum_spatial / spatial_size;\n    // float variance = summ / spatial_size - mean * mean;\n    // the flolowing code has higher precision than above comment code\n    float variance = (summ_spatial - mean * mean * spatial_size) / spatial_size;\n    float std = 1.f / sqrtf(variance + epsilon);\n\n    saved_mean[i] = mean;\n    saved_variance[i] = std;\n  }\n// compute instance_norm result: out = scale * (in - mean) / std + bias\n#pragma omp parallel for\n  for (int i = 0; i < nc; ++i) {\n    const float* in_p = in + i * spatial_size;\n    float* out_p = out + i * spatial_size;\n    int j = spatial_size;\n    const float sstd_val =\n        scale == nullptr ? saved_variance[i] : scale[i % c] * saved_variance[i];\n    const float bias_val = bias == nullptr ? 0. : bias[i % c];\n    const float mean_val = saved_mean[i];\n    const __m128 vsstd = _mm_set1_ps(sstd_val);\n    const __m128 vbias = _mm_set1_ps(bias_val);\n    const __m128 vmean = _mm_set1_ps(mean_val);\n    __m128 in0, in1, submean0, submean1, out0, out1;\n\n    for (; j > 7; j -= 8) {\n      in0 = _mm_loadu_ps(in_p);\n      in1 = _mm_loadu_ps(in_p + 4);\n      submean0 = _mm_sub_ps(in0, vmean);\n      submean1 = _mm_sub_ps(in1, vmean);\n      out0 = _mm_fmadd_ps(submean0, vsstd, vbias);\n      out1 = _mm_fmadd_ps(submean1, vsstd, vbias);\n\n      _mm_storeu_ps(out_p, out0);\n      _mm_storeu_ps(out_p + 4, out1);\n\n      in_p += 8;\n      out_p += 8;\n    }\n    for (; j > 3; j -= 4) {\n      in0 = _mm_loadu_ps(in_p);\n      submean0 = _mm_sub_ps(in0, vmean);\n      out0 = _mm_fmadd_ps(submean0, vsstd, vbias);\n\n      _mm_storeu_ps(out_p, out0);\n\n      in_p += 4;\n      out_p += 4;\n    }\n    for (; j > 0; j--) {\n      *out_p = (*in_p - mean_val) * sstd_val + bias_val;\n      in_p++;\n      out_p++;\n    }\n  }\n}\n\n}  // namespace math\n}  // namespace x86\n}  // namespace lite\n}  // namespace paddle\n
-#if defined(__clang__)
-#pragma clang attribute pop
-#elif defined(__GNUC__)
-#pragma GCC pop_options
-#endif
+// Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "lite/backends/x86/math/avx/instance_norm.h"
+#include <immintrin.h>
+#include <cmath>
+
+namespace paddle {
+namespace lite {
+namespace x86 {
+namespace math {
+
+void instance_norm(const float* in,
+                   float* out,
+                   const int n,
+                   const int c,
+                   const int height,
+                   const int width,
+                   const float epsilon,
+                   const float* scale,
+                   const float* bias,
+                   float* saved_mean,
+                   float* saved_variance) {
+  int nc = n * c;
+  int spatial_size = height * width;
+
+// compute saved_mean and saved_variance
+#pragma omp parallel for
+  for (int i = 0; i < nc; ++i) {
+    const float* in_p = in + i * spatial_size;
+    float sum_spatial = 0.f;
+    float summ_spatial = 0.f;
+    for (int h = 0; h < height; ++h) {
+      int w = width;
+
+      __m128 sum0 = _mm_set1_ps(0.f);
+      __m128 sum1 = _mm_set1_ps(0.f);
+      __m128 sum2 = _mm_set1_ps(0.f);
+      __m128 sum3 = _mm_set1_ps(0.f);
+      __m128 square_sum0 = _mm_set1_ps(0.f);
+      __m128 square_sum1 = _mm_set1_ps(0.f);
+      __m128 square_sum2 = _mm_set1_ps(0.f);
+      __m128 square_sum3 = _mm_set1_ps(0.f);
+      __m128 in0, in1, in2, in3;
+      for (; w > 15; w -= 16) {
+        in0 = _mm_loadu_ps(in_p);
+        in1 = _mm_loadu_ps(in_p + 4);
+        in2 = _mm_loadu_ps(in_p + 8);
+        in3 = _mm_loadu_ps(in_p + 12);
+        // add x
+        sum0 = _mm_add_ps(sum0, in0);
+        sum1 = _mm_add_ps(sum1, in1);
+        sum2 = _mm_add_ps(sum2, in2);
+        sum3 = _mm_add_ps(sum3, in3);
+        // add x * x
+        square_sum0 = _mm_fmadd_ps(in0, in0, square_sum0);
+        square_sum1 = _mm_fmadd_ps(in1, in1, square_sum1);
+        square_sum2 = _mm_fmadd_ps(in2, in2, square_sum2);
+        square_sum3 = _mm_fmadd_ps(in3, in3, square_sum3);
+
+        in_p += 16;
+      }
+      for (; w > 7; w -= 8) {
+        in0 = _mm_loadu_ps(in_p);
+        in1 = _mm_loadu_ps(in_p + 4);
+        sum0 = _mm_add_ps(sum0, in0);
+        sum1 = _mm_add_ps(sum1, in1);
+        square_sum0 = _mm_fmadd_ps(in0, in0, square_sum0);
+        square_sum1 = _mm_fmadd_ps(in1, in1, square_sum1);
+        in_p += 8;
+      }
+      for (; w > 3; w -= 4) {
+        in0 = _mm_loadu_ps(in_p);
+        sum0 = _mm_add_ps(sum0, in0);
+        square_sum0 = _mm_fmadd_ps(in0, in0, square_sum0);
+        in_p += 4;
+      }
+      float sum = 0.f;
+      float summ = 0.f;
+      for (; w > 0; w--) {
+        sum += *in_p;
+        summ += (*in_p) * (*in_p);
+        in_p++;
+      }
+
+      sum0 = _mm_add_ps(sum0, sum1);
+      sum2 = _mm_add_ps(sum2, sum3);
+      square_sum0 = _mm_add_ps(square_sum0, square_sum1);
+      square_sum2 = _mm_add_ps(square_sum2, square_sum3);
+
+      sum0 = _mm_add_ps(sum0, sum2);
+      square_sum0 = _mm_add_ps(square_sum0, square_sum2);
+
+      __m128 r = _mm_hadd_ps(sum0, square_sum0);
+      r = _mm_hadd_ps(r, r);
+      float buf[4];
+      _mm_storeu_ps(buf, r);
+      sum += buf[0];
+      summ += buf[1];
+      sum_spatial += sum;
+      summ_spatial += summ;
+    }
+    float mean = sum_spatial / spatial_size;
+    // float variance = summ / spatial_size - mean * mean;
+    // the flolowing code has higher precision than above comment code
+    float variance = (summ_spatial - mean * mean * spatial_size) / spatial_size;
+    float std = 1.f / sqrtf(variance + epsilon);
+
+    saved_mean[i] = mean;
+    saved_variance[i] = std;
+  }
+// compute instance_norm result: out = scale * (in - mean) / std + bias
+#pragma omp parallel for
+  for (int i = 0; i < nc; ++i) {
+    const float* in_p = in + i * spatial_size;
+    float* out_p = out + i * spatial_size;
+    int j = spatial_size;
+    const float sstd_val =
+        scale == nullptr ? saved_variance[i] : scale[i % c] * saved_variance[i];
+    const float bias_val = bias == nullptr ? 0. : bias[i % c];
+    const float mean_val = saved_mean[i];
+    const __m128 vsstd = _mm_set1_ps(sstd_val);
+    const __m128 vbias = _mm_set1_ps(bias_val);
+    const __m128 vmean = _mm_set1_ps(mean_val);
+    __m128 in0, in1, submean0, submean1, out0, out1;
+
+    for (; j > 7; j -= 8) {
+      in0 = _mm_loadu_ps(in_p);
+      in1 = _mm_loadu_ps(in_p + 4);
+      submean0 = _mm_sub_ps(in0, vmean);
+      submean1 = _mm_sub_ps(in1, vmean);
+      out0 = _mm_fmadd_ps(submean0, vsstd, vbias);
+      out1 = _mm_fmadd_ps(submean1, vsstd, vbias);
+
+      _mm_storeu_ps(out_p, out0);
+      _mm_storeu_ps(out_p + 4, out1);
+
+      in_p += 8;
+      out_p += 8;
+    }
+    for (; j > 3; j -= 4) {
+      in0 = _mm_loadu_ps(in_p);
+      submean0 = _mm_sub_ps(in0, vmean);
+      out0 = _mm_fmadd_ps(submean0, vsstd, vbias);
+
+      _mm_storeu_ps(out_p, out0);
+
+      in_p += 4;
+      out_p += 4;
+    }
+    for (; j > 0; j--) {
+      *out_p = (*in_p - mean_val) * sstd_val + bias_val;
+      in_p++;
+      out_p++;
+    }
+  }
+}
+
+}  // namespace math
+}  // namespace x86
+}  // namespace lite
+}  // namespace paddle
