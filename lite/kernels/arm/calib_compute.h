@@ -29,7 +29,7 @@ class CalibComputeFp32ToInt8
 
   void Run() override;
 
-  ~CalibComputeFp32ToInt8() override{};
+  ~CalibComputeFp32ToInt8() override {};
 
  private:
 };
@@ -44,7 +44,7 @@ class CalibComputeFp32ToFp16
 
   void Run() override;
 
-  ~CalibComputeFp32ToFp16() override{};
+  ~CalibComputeFp32ToFp16() override {};
 
  private:
 };
@@ -57,7 +57,35 @@ class CalibComputeFp16ToFp32
 
   void Run() override;
 
-  ~CalibComputeFp16ToFp32() override{};
+  ~CalibComputeFp16ToFp32() override {};
+
+ private:
+};
+
+// Direct int8 → fp16 dequant (alias int8_to_fp16). out = q * scale.
+template <DataLayoutType DLType>
+class CalibComputeInt8ToFp16
+    : public KernelLite<TARGET(kARM), PRECISION(kInt8), DLType> {
+ public:
+  using param_t = operators::CalibParam;
+
+  void Run() override;
+
+  ~CalibComputeInt8ToFp16() override {};
+
+ private:
+};
+
+// Greyscale uint8 → fp16. out = (u - 128) * scale.
+template <DataLayoutType DLType>
+class CalibComputeUint8ToFp16
+    : public KernelLite<TARGET(kARM), PRECISION(kUInt8), DLType> {
+ public:
+  using param_t = operators::CalibParam;
+
+  void Run() override;
+
+  ~CalibComputeUint8ToFp16() override {};
 
  private:
 };
@@ -71,7 +99,7 @@ class CalibComputeInt64ToInt32
 
   void Run() override;
 
-  ~CalibComputeInt64ToInt32() override{};
+  ~CalibComputeInt64ToInt32() override {};
 
  private:
 };
@@ -84,7 +112,21 @@ class CalibComputeInt8ToFp32
 
   void Run() override;
 
-  ~CalibComputeInt8ToFp32() override{};
+  ~CalibComputeInt8ToFp32() override {};
+
+ private:
+};
+
+// Greyscale uint8 → float32. out = (u - 128) * scale (xor-128 equivalent).
+template <DataLayoutType DLType>
+class CalibComputeUint8ToFp32
+    : public KernelLite<TARGET(kARM), PRECISION(kUInt8), DLType> {
+ public:
+  using param_t = operators::CalibParam;
+
+  void Run() override;
+
+  ~CalibComputeUint8ToFp32() override {};
 
  private:
 };
@@ -97,7 +139,7 @@ class CalibComputeInt32ToFp32
 
   void Run() override;
 
-  ~CalibComputeInt32ToFp32() override{};
+  ~CalibComputeInt32ToFp32() override {};
 
  private:
 };
@@ -110,7 +152,7 @@ class CalibComputeInt32ToInt64
 
   void Run() override;
 
-  ~CalibComputeInt32ToInt64() override{};
+  ~CalibComputeInt32ToInt64() override {};
 
  private:
 };
@@ -123,7 +165,7 @@ class CalibComputeFp32ToInt32
 
   void Run() override;
 
-  ~CalibComputeFp32ToInt32() override{};
+  ~CalibComputeFp32ToInt32() override {};
 
  private:
 };
@@ -136,7 +178,7 @@ class CalibComputeFp32ToInt64
 
   void Run() override;
 
-  ~CalibComputeFp32ToInt64() override{};
+  ~CalibComputeFp32ToInt64() override {};
 
  private:
 };
@@ -149,7 +191,7 @@ class CalibComputeInt64ToFp32
 
   void Run() override;
 
-  ~CalibComputeInt64ToFp32() override{};
+  ~CalibComputeInt64ToFp32() override {};
 
  private:
 };
@@ -162,7 +204,7 @@ class CalibComputeBoolToFp32
 
   void Run() override;
 
-  ~CalibComputeBoolToFp32() override{};
+  ~CalibComputeBoolToFp32() override {};
 
  private:
 };

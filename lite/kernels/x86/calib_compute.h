@@ -29,7 +29,7 @@ class CalibComputeFp32ToInt8 : public KernelLite<TARGET(kX86), Ptype, DLType> {
 
   void Run() override;
 
-  ~CalibComputeFp32ToInt8() override{};
+  ~CalibComputeFp32ToInt8() override {};
 
  private:
 };
@@ -41,7 +41,7 @@ class CalibComputeFp32ToFp16 : public KernelLite<TARGET(kX86), Ptype, DLType> {
 
   void Run() override;
 
-  ~CalibComputeFp32ToFp16() override{};
+  ~CalibComputeFp32ToFp16() override {};
 
  private:
 };
@@ -53,7 +53,7 @@ class CalibComputeFp16ToFp32 : public KernelLite<TARGET(kX86), Ptype, DLType> {
 
   void Run() override;
 
-  ~CalibComputeFp16ToFp32() override{};
+  ~CalibComputeFp16ToFp32() override {};
 
  private:
 };
@@ -66,7 +66,7 @@ class CalibComputeInt64ToInt32
 
   void Run() override;
 
-  ~CalibComputeInt64ToInt32() override{};
+  ~CalibComputeInt64ToInt32() override {};
 
  private:
 };
@@ -78,7 +78,19 @@ class CalibComputeInt8ToFp32 : public KernelLite<TARGET(kX86), Ptype, DLType> {
 
   void Run() override;
 
-  ~CalibComputeInt8ToFp32() override{};
+  ~CalibComputeInt8ToFp32() override {};
+
+ private:
+};
+
+template <PrecisionType Ptype, DataLayoutType DLType>
+class CalibComputeUint8ToFp32 : public KernelLite<TARGET(kX86), Ptype, DLType> {
+ public:
+  using param_t = operators::CalibParam;
+
+  void Run() override;
+
+  ~CalibComputeUint8ToFp32() override {};
 
  private:
 };
@@ -90,7 +102,7 @@ class CalibComputeInt32ToFp32 : public KernelLite<TARGET(kX86), Ptype, DLType> {
 
   void Run() override;
 
-  ~CalibComputeInt32ToFp32() override{};
+  ~CalibComputeInt32ToFp32() override {};
 
  private:
 };
@@ -103,7 +115,7 @@ class CalibComputeInt32ToInt64
 
   void Run() override;
 
-  ~CalibComputeInt32ToInt64() override{};
+  ~CalibComputeInt32ToInt64() override {};
 
  private:
 };
@@ -115,7 +127,7 @@ class CalibComputeFp32ToInt32 : public KernelLite<TARGET(kX86), Ptype, DLType> {
 
   void Run() override;
 
-  ~CalibComputeFp32ToInt32() override{};
+  ~CalibComputeFp32ToInt32() override {};
 
  private:
 };
@@ -127,7 +139,7 @@ class CalibComputeInt64ToFp32 : public KernelLite<TARGET(kX86), Ptype, DLType> {
 
   void Run() override;
 
-  ~CalibComputeInt64ToFp32() override{};
+  ~CalibComputeInt64ToFp32() override {};
 
  private:
 };
@@ -139,7 +151,7 @@ class CalibComputeInt32ToFp16 : public KernelLite<TARGET(kX86), Ptype, DLType> {
 
   void Run() override;
 
-  ~CalibComputeInt32ToFp16() override{};
+  ~CalibComputeInt32ToFp16() override {};
 
  private:
 };
@@ -151,7 +163,7 @@ class CalibComputeInt64ToFp16 : public KernelLite<TARGET(kX86), Ptype, DLType> {
 
   void Run() override;
 
-  ~CalibComputeInt64ToFp16() override{};
+  ~CalibComputeInt64ToFp16() override {};
 
  private:
 };
@@ -163,7 +175,7 @@ class CalibComputeFp16ToInt32 : public KernelLite<TARGET(kX86), Ptype, DLType> {
 
   void Run() override;
 
-  ~CalibComputeFp16ToInt32() override{};
+  ~CalibComputeFp16ToInt32() override {};
 
  private:
 };
